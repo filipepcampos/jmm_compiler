@@ -95,7 +95,7 @@ Type :
 	<INT> <OPEN_SQUARE_PAREN> <CLOSE_SQUARE_PAREN> |
 	<BOOLEAN> |
 	<INT> |
-	<Identifier>
+	<IDENTIFIER>
 ;
 
 Statement :
@@ -103,22 +103,22 @@ Statement :
 	<IF> <OPEN_PAREN> Expression <CLOSE_PAREN> Statement <ELSE> Statement |
 	<WHILE> <OPEN_PAREN> Expression <CLOSE_PAREN> Statement |
 	Expression <SEMICOLON> |
-	<Identifier> <EQUALS> Expression <SEMICOLON> |
-	<Identifier> <OPEN_SQUARE_PAREN> Expression <CLOSE_SQUARE_PAREN> <EQUALS> Expression <SEMICOLON> 
+	<IDENTIFIER> <EQUALS> Expression <SEMICOLON> |
+	<IDENTIFIER> <OPEN_SQUARE_PAREN> Expression <CLOSE_SQUARE_PAREN> <EQUALS> Expression <SEMICOLON>
 ;
 
 Expression :
 	Expression (<AND> | <LOWER> | <PLUS> | <MINUS> | <TIMES> | <DIVIDE>) Expression |
 	Expression <OPEN_SQUARE_PAREN> Expression <CLOSE_SQUARE_PAREN> |
 	Expression <FULL_STOP> <LENGTH> |
-	Expression <FULL_STOP> <Identifier> <OPEN_BRACKET> (Expression (<COMMA> Expression)+)? <CLOSE_BRACKET> |
+	Expression <FULL_STOP> <IDENTIFIER> <OPEN_BRACKET> (Expression (<COMMA> Expression)+)? <CLOSE_BRACKET> |
 	IntegerLiteral |
 	<TRUE> |
 	<FALSE> |
-	Identifier |
+	<IDENTIFIER> |
 	<THIS> |
 	<NEW> <INT> <OPEN_SQUARE_PAREN> Expression <CLOSE_SQUARE_PAREN> |
-	<NEW> Identifier <OPEN_PAREN> <CLOSE_PAREN> |
+	<NEW> <IDENTIFIER> <OPEN_PAREN> <CLOSE_PAREN> |
 	<EXCLAMATION_MARK> Expression |
 	<OPEN_PAREN> Expression <CLOSE_PAREN>
 ;

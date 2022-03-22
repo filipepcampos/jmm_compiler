@@ -2,8 +2,6 @@ PARSER_PACKAGE=pt.up.fe.comp;
 PARSER_CLASS=JmmGrammarParser;
 SMART_NODE_CREATION=false;
 
-SKIP : " " | "\t" | "\r" | "\n";
-
 TOKEN :
 	< PLUS : "+" > |
 	< MINUS : "-" > |
@@ -11,29 +9,123 @@ TOKEN :
 	< DIVIDE : "/" > |
 	< OPEN_PAREN : "(" > |
 	< CLOSE_PAREN : ")" > |
-	< INTEGER : (["0" - "9"])+ >
-;
+	< INTEGER : (["0" - "9"])+ > |
+	< AND : "&&" > |
+	< LOWER : "<" > |
+	< OPEN_SQUARE_PAREN : "[" > |
+	< CLOSE_SQUARE_PAREN : "]" > |
+	< OPEN_CURLY_BRAC : "{" > |
+	< CLOSE_CURLY_BRAC : "}" > |
+	< IDENTIFIER : (["A"-"Z", "a"-"z"] | "_" | "$")(["A"-"Z", "a"-"z", "0"-"9"] | "_" | "$")* > |
+	< IMPORT : "import" > |
+	< FULL_STOP : "." > |
+	< EQUALS : "=" > |
+	< EXCLAMATION_MARK : "!" > |
+	< COMMA : "," > |
+	< SEMICOLON : ";" > |
+	< LENGTH : "length" > |
+	< PUBLIC : "public" > |
+	< TRUE : "true" > |
+	< FALSE : "false" > |
+	< THIS : "this" > |
+	< NEW : "new" > |
+	< INT : "int" > |
+	< CLASS : "class" > |
+	< EXTENDS : "extends" > |
+	< RETURN : "return" > |
+	< STATIC : "static" > |
+	< VOID : "void" > |
+	< MAIN : "main" > |
+	< STRING : "String" > |
+	< BOOLEAN : "boolean" > |
+	< IF : "if" > |
+	< ELSE : "else" > |
+	< WHILE : "while" > | 
+	< BINARY : "0b"(["0" - "1"])+ > |
+	< OCT : "0"(["0" - "7"])+ > |
+	< HEX : "0x"(["0" - "9", "A" - "F", "a" - "f"])+ >
+;	
 
-Start : AdditiveExpression <EOF> ;
+Start : Program <EOF> ;
 
-AdditiveExpression :
-	MultiplicativeExpression
+Program : ImportDeclaration ClassDeclaration ;
+
+ImportDeclaration :
 	(
-		(< PLUS > | < MINUS >)
-		MultiplicativeExpression
-	)?
+		< IMPORT > 
+		< IDENTIFIER > 
+		(< FULL_STOP > < IDENTIFIER >)* 
+		< SEMICOLON >
+	)*
 ;
 
-MultiplicativeExpression :
-	Factor
-	(
-		(< TIMES > | < DIVIDE >)
-		Factor
-	)?
+ClassDeclaration :
+	< CLASS > < IDENTIFIER > (< EXTENDS > < IDENTIFIER >)? 
+	< OPEN_CURLY_BRAC > 
+		(VarDeclaration)* 
+		(MethodDeclaration)* 
+	< CLOSE_CURLY_BRAC >
 ;
 
-Factor :
+VarDeclaration : Type < IDENTIFIER > < SEMICOLON > ;
+
+MethodDeclaration :
+(
+	SCAN 2 < PUBLIC > < STATIC > < VOID > < MAIN > < OPEN_PAREN > 
+		< STRING > < OPEN_SQUARE_PAREN > < CLOSE_SQUARE_PAREN > < IDENTIFIER >
+	< CLOSE_PAREN >
+	< OPEN_CURLY_BRAC >
+		( VarDeclaration )*
+		( Statement )*
+	< CLOSE_CURLY_BRAC >
+)
+|
+(
+	< PUBLIC > Type < IDENTIFIER > 
+	< OPEN_PAREN > ( Type < IDENTIFIER > (< COMMA > Type < IDENTIFIER > )* )?  < CLOSE_PAREN > 
+	< OPEN_CURLY_BRAC >
+		( VarDeclaration )*
+		( Statement )*
+		< RETURN > Expression < SEMICOLON >
+	< CLOSE_CURLY_BRAC >
+) 
+;
+
+Type :
+	<INT> <OPEN_SQUARE_PAREN> <CLOSE_SQUARE_PAREN> |
+	<BOOLEAN> |
+	<INT> |
+	<Identifier>
+;
+
+Statement :
+	<OPEN_CURLY_BRAC> (Statement)* <CLOSE_CURLY_BRAC>
+	<IF> <OPEN_PAREN> Expression <CLOSE_PAREN> Statement <ELSE> Statement |
+	<WHILE> <OPEN_PAREN> Expression <CLOSE_PAREN> Statement |
+	Expression <SEMICOLON> |
+	<Identifier> <EQUALS> Expression <SEMICOLON> |
+	<Identifier> <OPEN_SQUARE_PAREN> Expression <CLOSE_SQUARE_PAREN> <EQUALS> Expression <SEMICOLON> 
+;
+
+Expression :
+	Expression (<AND> | <LOWER> | <PLUS> | <MINUS> | <TIMES> | <DIVIDE>) Expression |
+	Expression <OPEN_SQUARE_PAREN> Expression <CLOSE_SQUARE_PAREN> |
+	Expression <FULL_STOP> <LENGTH> |
+	Expression <FULL_STOP> <Identifier> <OPEN_BRACKET> (Expression (<COMMA> Expression)+)? <CLOSE_BRACKET> |
+	IntegerLiteral |
+	<TRUE> |
+	<FALSE> |
+	Identifier |
+	<THIS> |
+	<NEW> <INT> <OPEN_SQUARE_PAREN> Expression <CLOSE_SQUARE_PAREN> |
+	<NEW> Identifier <OPEN_PAREN> <CLOSE_PAREN> |
+	<EXCLAMATION_MARK> Expression |
+	<OPEN_PAREN> Expression <CLOSE_PAREN>
+;
+
+IntegerLiteral :
 	< INTEGER > |
-	< MINUS> Factor |
-	< OPEN_PAREN > AdditiveExpression < CLOSE_PAREN >
+	< BINARY > |
+	< OCT > |
+	< HEX >
 ;

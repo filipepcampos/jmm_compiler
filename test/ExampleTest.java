@@ -10,6 +10,8 @@ public class ExampleTest {
         // var parserResult = TestUtils.parse("2+3\n10+20\n");
         // parserResult.getReports().get(0).getException().get().printStackTrace();
         // // System.out.println();
+        // TestUtils.noErrors(parserResult.getReports())
+        // TestUtils.mustFail(parserResult.getReports())
         // var analysisResult = TestUtils.analyse(parserResult);
     }
 

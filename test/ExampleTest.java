@@ -4,6 +4,7 @@ import pt.up.fe.comp.TestUtils;
 
 public class ExampleTest {
 
+    /*
     @Test
     public void testExpression() {
         //TestUtils.parse("2+3\n10+20\n");
@@ -20,5 +21,5 @@ public class ExampleTest {
         TestUtils.noErrors(parserResult.getReports());
         // var analysisResult = TestUtils.analyse(parserResult);
         // System.out.println(analysisResult);
-    }
+    }*/
 }

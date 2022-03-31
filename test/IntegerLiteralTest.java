@@ -11,6 +11,7 @@ public class IntegerLiteralTest {
         }
     }
     
+    @Test
     public void integer(){
         test("0", true);
         test("1", true);
@@ -20,6 +21,7 @@ public class IntegerLiteralTest {
         test("1.2", false);
     }
 
+    @Test
     public void binary(){
         test("0b0", true);
         test("0b1", true);
@@ -29,6 +31,7 @@ public class IntegerLiteralTest {
         test("0b10120", false);
     }
 
+    @Test
     public void octal(){
         test("00", true);
         test("01", true);
@@ -36,6 +39,7 @@ public class IntegerLiteralTest {
         test("08", false);
     }
 
+    @Test
     public void hexadecimal(){
         test("0xABC", true);
         test("0x0", true);

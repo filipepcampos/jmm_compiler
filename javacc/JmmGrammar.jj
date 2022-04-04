@@ -3,7 +3,8 @@ PARSER_CLASS=JmmGrammarParser;
 TOKENS_ARE_NODES=false;
 SMART_NODE_CREATION=false;
 
-SKIP : " " | "\t" | "\r" | "\n" ;
+SKIP : " " | "\t" | "\r" | "\n" | < "//"(~["\n","\t","\r"])* > | < "/*" (~["*"])* "*" (~["*","/"] (~["*"])* "*" | "*")* "/" >;
+
 
 TOKEN :
 	< PLUS : "+" > |
@@ -74,58 +75,86 @@ VarDeclaration : Type < IDENTIFIER > < SEMICOLON > ;
 
 MethodDeclaration :
 	SCAN 2
-	(
-		< PUBLIC > < STATIC > < VOID > < MAIN > < OPEN_PAREN > 
-		< STRING > < OPEN_SQUARE_PAREN > < CLOSE_SQUARE_PAREN > < IDENTIFIER >
-		< CLOSE_PAREN >
-		< OPEN_CURLY_BRAC >
-			( VarDeclaration )*
-			( Statement )*
-		< CLOSE_CURLY_BRAC >
-	) |	(
-		< PUBLIC > Type < IDENTIFIER > 
-		< OPEN_PAREN > ( Type < IDENTIFIER > (< COMMA > Type < IDENTIFIER > )* )?  < CLOSE_PAREN > 
-		< OPEN_CURLY_BRAC >
-			( VarDeclaration )*
-			( Statement )*
-			< RETURN > Expression < SEMICOLON >
-		< CLOSE_CURLY_BRAC >
-	) 
+	(MainMethodDeclaration) | (InstanceMethodDeclaration) 
 ;
+
+MainMethodDeclaration :
+	< PUBLIC > < STATIC > < VOID > < MAIN > < OPEN_PAREN > 
+	< STRING > < OPEN_SQUARE_PAREN > < CLOSE_SQUARE_PAREN > < IDENTIFIER >
+	< CLOSE_PAREN >
+	< OPEN_CURLY_BRAC >
+		( SCAN 2 (VarDeclaration) )*
+		( Statement )*
+	< CLOSE_CURLY_BRAC >
+;
+
+InstanceMethodDeclaration :
+	< PUBLIC > Type < IDENTIFIER > 
+	< OPEN_PAREN > ( Type < IDENTIFIER > (< COMMA > Type < IDENTIFIER > )* )?  < CLOSE_PAREN > 
+	< OPEN_CURLY_BRAC >
+		( SCAN 2 (VarDeclaration) )*
+		( Statement )*
+		< RETURN > AndExpression < SEMICOLON >
+	< CLOSE_CURLY_BRAC >
+;
+
 
 Type :
 	<INT> (<OPEN_SQUARE_PAREN> <CLOSE_SQUARE_PAREN>)? |
 	<BOOLEAN> |
+	<STRING> |
 	<IDENTIFIER>
 ;
 
 Statement :
 	<OPEN_CURLY_BRAC> (Statement)* <CLOSE_CURLY_BRAC> |
-	<IF> <OPEN_PAREN> Expression <CLOSE_PAREN> Statement <ELSE> Statement |
-	<WHILE> <OPEN_PAREN> Expression <CLOSE_PAREN> Statement |
-	SCAN 2 (<IDENTIFIER> <EQUALS>) Expression <SEMICOLON> |
-	<IDENTIFIER> <OPEN_SQUARE_PAREN> Expression <CLOSE_SQUARE_PAREN> <EQUALS> Expression <SEMICOLON> |
-	Expression <SEMICOLON>
+	<IF> <OPEN_PAREN> AndExpression <CLOSE_PAREN> Statement <ELSE> Statement |
+	<WHILE> <OPEN_PAREN> AndExpression <CLOSE_PAREN> Statement |
+	SCAN 2 (<IDENTIFIER> <EQUALS>) AndExpression <SEMICOLON> |
+	SCAN 2 (<IDENTIFIER> <OPEN_SQUARE_PAREN>) AndExpression <CLOSE_SQUARE_PAREN> <EQUALS> AndExpression <SEMICOLON> |
+	AndExpression <SEMICOLON>
+;
+
+AndExpression #void :
+	LowerExpression ( <AND> LowerExpression #BinaryOp(2) )*
+;
+
+LowerExpression #void :
+	AdditiveExpression ( <LOWER> AdditiveExpression #BinaryOp(2) )*
+;
+
+AdditiveExpression #void :
+	MultiplicativeExpression (
+		(<PLUS> MultiplicativeExpression { jjtThis.put("op", "ADD"); }) #BinaryOp(2) |
+		(<MINUS> MultiplicativeExpression { jjtThis.put("op", "SUB"); }) #BinaryOp(2)
+	)*
+;
+
+MultiplicativeExpression #void :
+	NotExpression ( (<TIMES> | <DIVIDE>) NotExpression #BinaryOp(2))*
+;
+
+NotExpression #void :
+	(<EXCLAMATION_MARK> Expression #UnaryOp(1)) |
+	Expression
 ;
 
 Expression :
 	ExpressionFirst (
-		(<AND> | <LOWER> | <PLUS> | <MINUS> | <TIMES> | <DIVIDE>) Expression |
-		<OPEN_SQUARE_PAREN> Expression <CLOSE_SQUARE_PAREN> |
-		<FULL_STOP> ( <LENGTH> | <IDENTIFIER> <OPEN_PAREN> (Expression (<COMMA> Expression)+)? <CLOSE_PAREN> )
+		<OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN> |
+		<FULL_STOP> ( <LENGTH> | <IDENTIFIER> <OPEN_PAREN> (AndExpression (<COMMA> AndExpression)*)? <CLOSE_PAREN> )
 	)?
 ;
 
-ExpressionFirst :
+ExpressionFirst #void :
 	IntegerLiteral |
 	<TRUE> |
 	<FALSE> |
 	<IDENTIFIER> |
 	<THIS> |
-	SCAN 2 (<NEW> <INT>) <OPEN_SQUARE_PAREN> Expression <CLOSE_SQUARE_PAREN> |
+	SCAN 2 (<NEW> <INT>) <OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN> |
 	<NEW> <IDENTIFIER> <OPEN_PAREN> <CLOSE_PAREN> |
-	<EXCLAMATION_MARK> Expression |
-	<OPEN_PAREN> Expression <CLOSE_PAREN>
+	<OPEN_PAREN> AndExpression <CLOSE_PAREN>
 ;
 
 IntegerLiteral :

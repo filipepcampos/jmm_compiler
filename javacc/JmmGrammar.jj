@@ -31,6 +31,7 @@ TOKEN :
 	< THIS : "this" > |
 	< NEW : "new" > |
 	< INT : "int" > |
+	< INT_ARRAY : "int[]" > |
 	< CLASS : "class" > |
 	< EXTENDS : "extends" > |
 	< RETURN : "return" > |
@@ -49,7 +50,7 @@ TOKEN :
 	< IDENTIFIER : (["A"-"Z", "a"-"z"] | "_" | "$")(["A"-"Z", "a"-"z", "0"-"9"] | "_" | "$")* >
 ;	
 
-Start : Program <EOF> ;
+Start #void : Program <EOF> ;
 
 Program : ImportDeclaration ClassDeclaration ;
 
@@ -63,14 +64,14 @@ ImportDeclaration :
 ;
 
 ClassDeclaration :
-	< CLASS > < IDENTIFIER > (< EXTENDS > < IDENTIFIER >)? 
+	< CLASS > < IDENTIFIER > {jjtThis.put("className", lastConsumedToken.getImage());} (< EXTENDS > < IDENTIFIER > {jjtThis.put("baseClassName", lastConsumedToken.getImage());})? 
 	< OPEN_CURLY_BRAC >
 		(VarDeclaration)* 
 		(MethodDeclaration)* 
 	< CLOSE_CURLY_BRAC >
 ;
 
-VarDeclaration #void : (Type <IDENTIFIER> {jjtThis.put("name", lastConsumedToken.getImage());} <SEMICOLON>) #VarDeclare ;
+VarDeclaration #void : (Type {jjtThis.put("type", lastConsumedToken.getImage());} <IDENTIFIER> {jjtThis.put("name", lastConsumedToken.getImage());} <SEMICOLON>) #VarDeclaration ;
 
 MethodDeclaration #void :
 	SCAN 2
@@ -79,7 +80,7 @@ MethodDeclaration #void :
 
 MainMethodDeclaration :
 	(< PUBLIC > < STATIC > < VOID > < MAIN > < OPEN_PAREN > 
-	< STRING > < OPEN_SQUARE_PAREN > < CLOSE_SQUARE_PAREN > < IDENTIFIER >
+	(< STRING > < OPEN_SQUARE_PAREN > < CLOSE_SQUARE_PAREN > < IDENTIFIER > { jjtThis.put("type", "String[]"); jjtThis.put("name", lastConsumedToken.getImage()); }) #Parameter
 	< CLOSE_PAREN >
 	< OPEN_CURLY_BRAC >
 		( SCAN 2 (VarDeclaration) )*
@@ -88,8 +89,13 @@ MainMethodDeclaration :
 ;
 
 InstanceMethodDeclaration :
-	< PUBLIC > Type < IDENTIFIER >
-	< OPEN_PAREN > ( Type < IDENTIFIER > (< COMMA > Type < IDENTIFIER > )* )? < CLOSE_PAREN > 
+	< PUBLIC > Type { jjtThis.put("type", lastConsumedToken.getImage()); } < IDENTIFIER > { jjtThis.put("name", lastConsumedToken.getImage()); } 
+	< OPEN_PAREN > 
+	( 
+		( Type {jjtThis.put("type", lastConsumedToken.getImage());} < IDENTIFIER > { jjtThis.put("name", lastConsumedToken.getImage()); }) #Parameter(0)
+		(( < COMMA > Type {jjtThis.put("type", lastConsumedToken.getImage());} < IDENTIFIER > { jjtThis.put("name", lastConsumedToken.getImage()); }) #Parameter(0) )* 
+	)? 
+	< CLOSE_PAREN > 
 	< OPEN_CURLY_BRAC >
 		( SCAN 2 (VarDeclaration) )*
 		( Statement )*
@@ -98,20 +104,20 @@ InstanceMethodDeclaration :
 ;
 
 Type #void :
-	SCAN 2 (<INT> <OPEN_SQUARE_PAREN> <CLOSE_SQUARE_PAREN> {jjtThis.put("type", "intArray"); }) #Type |
-	(<INT> {jjtThis.put("type", "int");}) #Type |
-	(<BOOLEAN> {jjtThis.put("type", "boolean");}) #Type |
-	(<STRING> {jjtThis.put("type", "string");}) #Type |
-	(<IDENTIFIER> {jjtThis.put("type", "identifier");}) #Type
+	<INT_ARRAY> |
+	<INT> |
+	<BOOLEAN> |
+	<STRING> |
+	<IDENTIFIER> 
 ;
 
 Statement #void :
-	<OPEN_CURLY_BRAC> (Statement)* <CLOSE_CURLY_BRAC> |
-	<IF> <OPEN_PAREN> AndExpression <CLOSE_PAREN> Statement <ELSE> Statement |
-	<WHILE> <OPEN_PAREN> AndExpression <CLOSE_PAREN> Statement |
-	SCAN 2 (<IDENTIFIER> <EQUALS>) AndExpression <SEMICOLON> |
-	SCAN 2 (<IDENTIFIER> <OPEN_SQUARE_PAREN>) AndExpression <CLOSE_SQUARE_PAREN> <EQUALS> AndExpression <SEMICOLON> |
-	AndExpression <SEMICOLON>
+	(<OPEN_CURLY_BRAC> (Statement)* <CLOSE_CURLY_BRAC>) #StatementScope |
+	(<IF> <OPEN_PAREN> AndExpression <CLOSE_PAREN> Statement <ELSE> Statement) #IfStatement(3) |
+	(<WHILE> <OPEN_PAREN> AndExpression <CLOSE_PAREN> Statement) #WhileStatement(2) |
+	SCAN 2 ((<IDENTIFIER> { jjtThis.put("name", lastConsumedToken.getImage()); } <EQUALS>) AndExpression <SEMICOLON>) #Assignment(1) |
+	SCAN 2 ((<IDENTIFIER> { jjtThis.put("name", lastConsumedToken.getImage()); } <OPEN_SQUARE_PAREN>) AndExpression <CLOSE_SQUARE_PAREN> <EQUALS> AndExpression <SEMICOLON>) #ArrayAssignment(2) |
+	AndExpression <SEMICOLON> // Maybe TODO
 ;
 
 AndExpression #void :
@@ -141,29 +147,42 @@ NotExpression #void :
 	Expression
 ;
 
-Expression :
-	ExpressionFirst (
-		<OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN> |
-		<FULL_STOP> ( <LENGTH> | <IDENTIFIER> <OPEN_PAREN> (AndExpression (<COMMA> AndExpression)*)? <CLOSE_PAREN> )
+Expression #void :
+	ExpressionFirst
+	(
+		(<OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN>) #ArrayAccess(2) |
+		<FULL_STOP>
+		(
+			<LENGTH> #Length(1) | 
+			(
+				<IDENTIFIER> {jjtThis.put("name", lastConsumedToken.getImage()); } 
+				<OPEN_PAREN> 
+					Arguments  
+				<CLOSE_PAREN> 
+			) #ClassMethod(2)
+		)
 	)?
 ;
 
+Arguments #void :
+	(AndExpression #Argument(1) (<COMMA> AndExpression #Argument(1))*)? #Arguments;
+
 ExpressionFirst #void :
 	IntegerLiteral |
-	<TRUE> |
-	<FALSE> |
-	<IDENTIFIER> |
-	<THIS> |
-	SCAN 2 (<NEW> <INT>) <OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN> |
-	<NEW> <IDENTIFIER> <OPEN_PAREN> <CLOSE_PAREN> |
-	<OPEN_PAREN> AndExpression <CLOSE_PAREN>
+	(<TRUE> { jjtThis.put("value", "true"); }) #Bool |
+	(<FALSE> { jjtThis.put("value", "false"); }) #Bool |
+	(<IDENTIFIER> { jjtThis.put("value", lastConsumedToken.getImage()); }) #Identifier |
+	(<THIS> { jjtThis.put("value", "this"); }) #Identifier |
+	SCAN 2 (<NEW> <INT>) <OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN> #ArrayInitialization(1) |
+	(<NEW> <IDENTIFIER> { jjtThis.put("name", lastConsumedToken.getImage()); } <OPEN_PAREN> <CLOSE_PAREN>) #ClassInitialization|
+	<OPEN_PAREN> AndExpression <CLOSE_PAREN> #ExpressionInParentheses(1) // TODO: See if this is necessary
 ;
 
-IntegerLiteral :
-	< INTEGER > |
-	< BINARY > |
-	< OCT > |
-	< HEX >
+IntegerLiteral #void :
+	(< INTEGER > { jjtThis.put("type", "decimal"); jjtThis.put("value", lastConsumedToken.getImage()); }) #Int |
+	(< BINARY > { jjtThis.put("type", "binary"); jjtThis.put("value", lastConsumedToken.getImage()); }) #Int |
+	(< OCT > { jjtThis.put("type", "octal"); jjtThis.put("value", lastConsumedToken.getImage()); }) #Int |
+	(< HEX > { jjtThis.put("type", "hexadecimal"); jjtThis.put("value", lastConsumedToken.getImage()); }) #Int
 ;
 
 // Injections for the implementation of JmmNode

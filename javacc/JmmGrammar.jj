@@ -5,7 +5,6 @@ SMART_NODE_CREATION=false;
 
 SKIP : " " | "\t" | "\r" | "\n" | < "//"(~["\n","\t","\r"])* > | < "/*" (~["*"])* "*" (~["*","/"] (~["*"])* "*" | "*")* "/" >;
 
-
 TOKEN :
 	< PLUS : "+" > |
 	< MINUS : "-" > |
@@ -71,26 +70,26 @@ ClassDeclaration :
 	< CLOSE_CURLY_BRAC >
 ;
 
-VarDeclaration : Type < IDENTIFIER > < SEMICOLON > ;
+VarDeclaration #void : (Type <IDENTIFIER> {jjtThis.put("name", lastConsumedToken.getImage());} <SEMICOLON>) #VarDeclare ;
 
-MethodDeclaration :
+MethodDeclaration #void :
 	SCAN 2
 	(MainMethodDeclaration) | (InstanceMethodDeclaration) 
 ;
 
 MainMethodDeclaration :
-	< PUBLIC > < STATIC > < VOID > < MAIN > < OPEN_PAREN > 
+	(< PUBLIC > < STATIC > < VOID > < MAIN > < OPEN_PAREN > 
 	< STRING > < OPEN_SQUARE_PAREN > < CLOSE_SQUARE_PAREN > < IDENTIFIER >
 	< CLOSE_PAREN >
 	< OPEN_CURLY_BRAC >
 		( SCAN 2 (VarDeclaration) )*
 		( Statement )*
-	< CLOSE_CURLY_BRAC >
+	< CLOSE_CURLY_BRAC >)
 ;
 
 InstanceMethodDeclaration :
-	< PUBLIC > Type < IDENTIFIER > 
-	< OPEN_PAREN > ( Type < IDENTIFIER > (< COMMA > Type < IDENTIFIER > )* )?  < CLOSE_PAREN > 
+	< PUBLIC > Type < IDENTIFIER >
+	< OPEN_PAREN > ( Type < IDENTIFIER > (< COMMA > Type < IDENTIFIER > )* )? < CLOSE_PAREN > 
 	< OPEN_CURLY_BRAC >
 		( SCAN 2 (VarDeclaration) )*
 		( Statement )*
@@ -98,15 +97,15 @@ InstanceMethodDeclaration :
 	< CLOSE_CURLY_BRAC >
 ;
 
-
-Type :
-	<INT> (<OPEN_SQUARE_PAREN> <CLOSE_SQUARE_PAREN>)? |
-	<BOOLEAN> |
-	<STRING> |
-	<IDENTIFIER>
+Type #void :
+	SCAN 2 (<INT> <OPEN_SQUARE_PAREN> <CLOSE_SQUARE_PAREN> {jjtThis.put("type", "intArray"); }) #Type |
+	(<INT> {jjtThis.put("type", "int");}) #Type |
+	(<BOOLEAN> {jjtThis.put("type", "boolean");}) #Type |
+	(<STRING> {jjtThis.put("type", "string");}) #Type |
+	(<IDENTIFIER> {jjtThis.put("type", "identifier");}) #Type
 ;
 
-Statement :
+Statement #void :
 	<OPEN_CURLY_BRAC> (Statement)* <CLOSE_CURLY_BRAC> |
 	<IF> <OPEN_PAREN> AndExpression <CLOSE_PAREN> Statement <ELSE> Statement |
 	<WHILE> <OPEN_PAREN> AndExpression <CLOSE_PAREN> Statement |
@@ -116,11 +115,11 @@ Statement :
 ;
 
 AndExpression #void :
-	LowerExpression ( <AND> LowerExpression #BinaryOp(2) )*
+	LowerExpression ( (<AND> LowerExpression { jjtThis.put("op", "AND"); }) #BinaryOp(2) )*
 ;
 
 LowerExpression #void :
-	AdditiveExpression ( <LOWER> AdditiveExpression #BinaryOp(2) )*
+	AdditiveExpression ( (<LOWER> AdditiveExpression { jjtThis.put("op", "LOW"); }) #BinaryOp(2) )*
 ;
 
 AdditiveExpression #void :
@@ -131,11 +130,14 @@ AdditiveExpression #void :
 ;
 
 MultiplicativeExpression #void :
-	NotExpression ( (<TIMES> | <DIVIDE>) NotExpression #BinaryOp(2))*
+	NotExpression (
+		(< TIMES > NotExpression { jjtThis.put("op", "MUL"); }) #BinaryOp(2) |
+		(< DIVIDE > NotExpression { jjtThis.put("op", "DIV"); }) #BinaryOp(2)
+	)*
 ;
 
 NotExpression #void :
-	(<EXCLAMATION_MARK> Expression #UnaryOp(1)) |
+	(<EXCLAMATION_MARK> Expression { jjtThis.put("op", "NEG"); }) #UnaryOp(1) |
 	Expression
 ;
 

@@ -11,6 +11,7 @@ public class TypeTest {
         }
     }
 
+    /*
     @Test
     public void integer(){
         test("int", true);
@@ -42,6 +43,6 @@ public class TypeTest {
     @Test
     public void empty(){
         test("", false);
-    }
+    }*/
     
 }

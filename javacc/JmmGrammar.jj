@@ -171,18 +171,18 @@ ExpressionFirst #void :
 	IntegerLiteral |
 	(<TRUE> { jjtThis.put("value", "true"); }) #Bool |
 	(<FALSE> { jjtThis.put("value", "false"); }) #Bool |
-	(<IDENTIFIER> { jjtThis.put("value", lastConsumedToken.getImage()); }) #Identifier |
-	(<THIS> { jjtThis.put("value", "this"); }) #Identifier |
+	(<IDENTIFIER> { jjtThis.put("value", lastConsumedToken.getImage()); }) #Id |
+	(<THIS> { jjtThis.put("value", "this"); }) #Id |
 	SCAN 2 (<NEW> <INT>) <OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN> #ArrayInitialization(1) |
 	(<NEW> <IDENTIFIER> { jjtThis.put("name", lastConsumedToken.getImage()); } <OPEN_PAREN> <CLOSE_PAREN>) #ClassInitialization|
 	<OPEN_PAREN> AndExpression <CLOSE_PAREN> #ExpressionInParentheses(1) // TODO: See if this is necessary
 ;
 
 IntegerLiteral #void :
-	(< INTEGER > { jjtThis.put("type", "decimal"); jjtThis.put("value", lastConsumedToken.getImage()); }) #Int |
-	(< BINARY > { jjtThis.put("type", "binary"); jjtThis.put("value", lastConsumedToken.getImage()); }) #Int |
-	(< OCT > { jjtThis.put("type", "octal"); jjtThis.put("value", lastConsumedToken.getImage()); }) #Int |
-	(< HEX > { jjtThis.put("type", "hexadecimal"); jjtThis.put("value", lastConsumedToken.getImage()); }) #Int
+	(< INTEGER > { jjtThis.put("type", "decimal"); jjtThis.put("value", lastConsumedToken.getImage()); }) #IntLiteral |
+	(< BINARY > { jjtThis.put("type", "binary"); jjtThis.put("value", lastConsumedToken.getImage()); }) #IntLiteral |
+	(< OCT > { jjtThis.put("type", "octal"); jjtThis.put("value", lastConsumedToken.getImage()); }) #IntLiteral |
+	(< HEX > { jjtThis.put("type", "hexadecimal"); jjtThis.put("value", lastConsumedToken.getImage()); }) #IntLiteral
 ;
 
 // Injections for the implementation of JmmNode

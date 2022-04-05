@@ -153,7 +153,7 @@ Expression #void :
 		(<OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN>) #ArrayAccess(2) |
 		<FULL_STOP>
 		(
-			<LENGTH> #Length(1) | 
+			<LENGTH> #Len(1) | 
 			(
 				<IDENTIFIER> {jjtThis.put("name", lastConsumedToken.getImage()); } 
 				<OPEN_PAREN> 

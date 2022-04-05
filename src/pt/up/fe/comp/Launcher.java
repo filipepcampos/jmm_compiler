@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
+import pt.up.fe.comp.jmm.report.ReportType;
+import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
@@ -40,11 +42,23 @@ public class Launcher {
         // Parse stage
         JmmParserResult parserResult = parser.parse(input, config);
 
-        // 
-        System.out.println(parserResult.getRootNode().toTree());
-
         // Check if there are parsing errors
-        TestUtils.noErrors(parserResult.getReports());
+        parserResult.getReports().stream()
+            .filter(report -> report.getType() == ReportType.ERROR)
+            .findFirst()
+            .ifPresent(report -> {
+                if (report.getException().isPresent()) {
+                    System.out.println(report.getMessage());
+                }
+            });
+        
+        JmmNode rootNode = parserResult.getRootNode();
+        if (rootNode != null) {
+            System.out.println(rootNode.toTree());
+        } else {
+            System.out.println("Program finished due to parser error.");
+            return;
+        }
 
         // ... add remaining stages
     }

@@ -1,5 +1,6 @@
 import MathUtils; //lowerLimit,upperLimit
 import Quicksort;
+import Something.other.othe.oth;
 
 class Lazysort extends Quicksort {
     public static void main(String[] a) {
@@ -50,7 +51,7 @@ class Lazysort extends Quicksort {
 
 		rand = rand + rand + lazy + lazy * lazy;
         
-        return lazy;
+        return 5+2*lazy;
     }
 
 }

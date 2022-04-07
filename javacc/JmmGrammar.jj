@@ -54,12 +54,14 @@ Start #void : Program <EOF> ;
 
 Program : ImportDeclaration ClassDeclaration ;
 
-ImportDeclaration :
+ImportDeclaration #void :
 	(
+		(
 		< IMPORT > 
-		< IDENTIFIER > 
-		(< FULL_STOP > < IDENTIFIER >)* 
+		< IDENTIFIER > {jjtThis.put("name", lastConsumedToken.getImage());}
+		((< FULL_STOP > < IDENTIFIER > {jjtThis.put("name", lastConsumedToken.getImage());}) #SubPackage(0) )* 
 		< SEMICOLON >
+		) #ImportDecl
 	)*
 ;
 
@@ -99,7 +101,7 @@ InstanceMethodDeclaration :
 	< OPEN_CURLY_BRAC >
 		( SCAN 2 (VarDeclaration) )*
 		( Statement )*
-		< RETURN > AndExpression < SEMICOLON >
+		(< RETURN > AndExpression < SEMICOLON >) #ReturnExpression(1)
 	< CLOSE_CURLY_BRAC >
 ;
 
@@ -113,11 +115,11 @@ Type #void :
 
 Statement #void :
 	(<OPEN_CURLY_BRAC> (Statement)* <CLOSE_CURLY_BRAC>) #StatementScope |
-	(<IF> <OPEN_PAREN> AndExpression <CLOSE_PAREN> Statement <ELSE> Statement) #IfStatement(3) |
-	(<WHILE> <OPEN_PAREN> AndExpression <CLOSE_PAREN> Statement) #WhileStatement(2) |
+	(<IF> <OPEN_PAREN> AndExpression #Condition(1) <CLOSE_PAREN> Statement <ELSE> Statement) #IfStatement(3) |
+	(<WHILE> <OPEN_PAREN> AndExpression #Condition(1) <CLOSE_PAREN> Statement) #WhileStatement(2) |
 	SCAN 2 ((<IDENTIFIER> { jjtThis.put("name", lastConsumedToken.getImage()); } <EQUALS>) AndExpression <SEMICOLON>) #Assignment(1) |
 	SCAN 2 ((<IDENTIFIER> { jjtThis.put("name", lastConsumedToken.getImage()); } <OPEN_SQUARE_PAREN>) AndExpression <CLOSE_SQUARE_PAREN> <EQUALS> AndExpression <SEMICOLON>) #ArrayAssignment(2) |
-	AndExpression <SEMICOLON> // Maybe TODO
+	AndExpression <SEMICOLON> #StatementExpression(1)
 ;
 
 AndExpression #void :
@@ -153,7 +155,7 @@ Expression #void :
 		(<OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN>) #ArrayAccess(2) |
 		<FULL_STOP>
 		(
-			<LENGTH> #Length(1) | 
+			<LENGTH> #LengthOp(1) | 
 			(
 				<IDENTIFIER> {jjtThis.put("name", lastConsumedToken.getImage()); } 
 				<OPEN_PAREN> 
@@ -161,7 +163,7 @@ Expression #void :
 				<CLOSE_PAREN> 
 			) #ClassMethod(2)
 		)
-	)?
+	)*
 ;
 
 Arguments #void :
@@ -171,8 +173,8 @@ ExpressionFirst #void :
 	IntegerLiteral |
 	(<TRUE> { jjtThis.put("value", "true"); }) #Bool |
 	(<FALSE> { jjtThis.put("value", "false"); }) #Bool |
-	(<IDENTIFIER> { jjtThis.put("value", lastConsumedToken.getImage()); }) #Id |
-	(<THIS> { jjtThis.put("value", "this"); }) #Id |
+	(<IDENTIFIER> { jjtThis.put("name", lastConsumedToken.getImage()); }) #Id |
+	(<THIS> { jjtThis.put("name", "this"); }) #Id |
 	SCAN 2 (<NEW> <INT>) <OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN> #ArrayInitialization(1) |
 	(<NEW> <IDENTIFIER> { jjtThis.put("name", lastConsumedToken.getImage()); } <OPEN_PAREN> <CLOSE_PAREN>) #ClassInitialization|
 	<OPEN_PAREN> AndExpression <CLOSE_PAREN> #ExpressionInParentheses(1) // TODO: See if this is necessary

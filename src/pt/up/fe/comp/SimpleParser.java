@@ -3,6 +3,7 @@ package pt.up.fe.comp;
 import java.util.Collections;
 import java.util.Map;
 
+import pt.up.fe.comp.ParseException;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.parser.JmmParser;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
@@ -11,6 +12,7 @@ import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsSystem;
+
 
 /**
  * Copyright 2022 SPeCS.
@@ -45,6 +47,10 @@ public class SimpleParser implements JmmParser {
 
             return new JmmParserResult((JmmNode) root, Collections.emptyList(), config);
 
+        } catch (ParseException e) {
+            Token token = e.getToken();
+            String msg = "Exception during parsing: " + token + " at line " + token.getBeginLine() + " and column " + token.getBeginColumn();
+            return JmmParserResult.newError(Report.newError(Stage.SYNTATIC, token.getBeginLine(), token.getBeginColumn(), msg, e));
         } catch (Exception e) {
             return JmmParserResult.newError(Report.newError(Stage.SYNTATIC, -1, -1, "Exception during parsing", e));
         }
@@ -67,6 +73,7 @@ public class SimpleParser implements JmmParser {
             return new JmmParserResult((JmmNode) root, Collections.emptyList(), config);
 
         } catch (Exception e) {
+            // TODO: e.getCause()
             return JmmParserResult.newError(Report.newError(Stage.SYNTATIC, -1, -1, "Exception during parsing", e));
         }
     }

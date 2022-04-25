@@ -1,5 +1,11 @@
+package pt.up.fe.comp;
+
 import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
+import pt.up.fe.comp.jmm.analysis.table.Type;
 
 public class Method {
     String signature;

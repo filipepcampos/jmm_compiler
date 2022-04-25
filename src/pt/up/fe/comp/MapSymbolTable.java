@@ -35,12 +35,24 @@ public class MapSymbolTable implements SymbolTable {
         return this.className;
     }
 
+    public void setClassName(String className) {
+        this.className = className;
+    }
+
     public String getSuper(){
         return this.superName;
+    }
+
+    public void setSuperName(String superName) {
+        this.superName = superName;
     }
     
     public List<Symbol> getFields(){
         return new ArrayList<Symbol>();
+    }
+
+    public void addField(Symbol field) {
+        this.fields.put(field, false);
     }
 
     public List<String> getMethods(){
@@ -48,7 +60,7 @@ public class MapSymbolTable implements SymbolTable {
     }
 
     public Type getReturnType(String methodSignature) {
-        return this.methods.get(methodSignature).getReturnType()
+        return this.methods.get(methodSignature).getReturnType();
     }
 
     public List<Symbol> getParameters(String methodSignature) {

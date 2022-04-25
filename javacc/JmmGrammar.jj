@@ -145,7 +145,7 @@ MultiplicativeExpression #void :
 ;
 
 NotExpression #void :
-	(<EXCLAMATION_MARK> Expression { jjtThis.put("op", "NEG"); }) #UnaryOp(1) |
+	(<EXCLAMATION_MARK> NotExpression { jjtThis.put("op", "NEG"); }) #UnaryOp(1) |
 	Expression
 ;
 

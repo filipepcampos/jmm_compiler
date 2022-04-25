@@ -60,6 +60,16 @@ public class Launcher {
             return;
         }
 
+        MapSymbolTable symbolTable = new MapSymbolTable(rootNode);
+        
+        var imports = symbolTable.getImports();
+
+        if (imports.isEmpty()) {
+            System.out.println(" <no imports>\n");
+        } else {
+            System.out.println();
+            imports.forEach(fullImport -> System.out.println(" - " + fullImport)) ;
+        }
         // ... add remaining stages
     }
 

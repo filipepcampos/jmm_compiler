@@ -68,7 +68,7 @@ public class MapSymbolTable implements SymbolTable {
     }
 
     public List<Symbol> getParameters(String methodSignature) {
-        return new ArrayList<Symbol>();
+        return this.methods.get(methodSignature).getParameters();
     }
 
     public List<Symbol> getLocalVariables(String methodSignature){

@@ -1,12 +1,13 @@
 package pt.up.fe.comp;
+import pt.up.fe.comp.MapSymbolTable;
+import pt.up.fe.comp.JmmMethod;
+import pt.up.fe.comp.MethodCollector;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import java.util.stream.Collectors;
-import pt.up.fe.comp.MapSymbolTable;
-import pt.up.fe.comp.JmmMethod;
-import pt.up.fe.comp.MethodCollector;
+import java.util.Optional;
 
 public class SymbolTableCollector extends AJmmVisitor<MapSymbolTable, Boolean> {
 
@@ -38,7 +39,10 @@ public class SymbolTableCollector extends AJmmVisitor<MapSymbolTable, Boolean> {
 
     private Boolean visitClassDeclaration(JmmNode classDeclaration, MapSymbolTable symbolTable) {
         symbolTable.setClassName(classDeclaration.get("className"));
-        symbolTable.setSuperName(classDeclaration.get("baseClassName"));
+        Optional<String> baseClassName = classDeclaration.getOptional("baseClassName");
+        if(baseClassName.isPresent()){
+            symbolTable.setSuperName(classDeclaration.get("baseClassName"));
+        }
 
         for (var child : classDeclaration.getChildren()) {
             visit(child, symbolTable);

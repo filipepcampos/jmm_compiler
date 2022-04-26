@@ -12,7 +12,6 @@ public class MethodCollector extends AJmmVisitor<Boolean, Boolean> {
         addVisit("MainMethodDeclaration", this::visitMainMethodDeclaration);
         addVisit("InstanceMethodDeclaration", this::visitMethodDeclaration);
         addVisit("Parameter", this::visitParameter);
-        //addVisit("VarDeclaration", );
         addVisit("VarDeclaration", this::visitLocalVariable);
 
         visit(rootNode);

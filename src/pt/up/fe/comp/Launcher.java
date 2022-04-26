@@ -7,12 +7,14 @@ import java.util.Map;
 
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
 import pt.up.fe.comp.jmm.report.ReportType;
+import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
 import pt.up.fe.comp.SymbolTableCollector;
 import pt.up.fe.comp.MapSymbolTable;
+import pt.up.fe.comp.JmmAnalyser;
 
 public class Launcher {
 
@@ -62,10 +64,10 @@ public class Launcher {
             return;
         }
         
-        MapSymbolTable symbolTable = new MapSymbolTable();
-        SymbolTableCollector collector = new SymbolTableCollector();
-        collector.visit(rootNode, symbolTable);
-        System.out.println(symbolTable.print());
+        JmmAnalyser analyser = new JmmAnalyser();
+        JmmSemanticsResult analysisResult = analyser.semanticAnalysis(parserResult);
+        System.out.println(analysisResult.getSymbolTable().print());
+        TestUtils.noErrors(analysisResult);
 
         // ... add remaining stages
     }

@@ -11,6 +11,8 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
+import pt.up.fe.comp.SymbolTableCollector;
+import pt.up.fe.comp.MapSymbolTable;
 
 public class Launcher {
 
@@ -59,17 +61,12 @@ public class Launcher {
             System.out.println("Program finished due to parser error.");
             return;
         }
-
-        MapSymbolTable symbolTable = new MapSymbolTable(rootNode);
         
-        var imports = symbolTable.getImports();
+        MapSymbolTable symbolTable = new MapSymbolTable();
+        SymbolTableCollector collector = new SymbolTableCollector();
+        collector.visit(rootNode, symbolTable);
+        System.out.println(symbolTable.print());
 
-        if (imports.isEmpty()) {
-            System.out.println(" <no imports>\n");
-        } else {
-            System.out.println();
-            imports.forEach(fullImport -> System.out.println(" - " + fullImport)) ;
-        }
         // ... add remaining stages
     }
 

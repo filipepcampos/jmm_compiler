@@ -3,8 +3,9 @@ import Quicksort;
 import Something.other.othe.oth;
 
 class Lazysort extends Quicksort {
-    int attribute1;
+    int[] attribute1;
     int attribute2;
+    String attribute3;
 
     public static void main(String[] a) {
         int[] L;

@@ -3,10 +3,10 @@ import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.stream.Collectors;
 import pt.up.fe.comp.MapSymbolTable;
+import pt.up.fe.comp.JmmMethod;
+import pt.up.fe.comp.MethodCollector;
 
 public class SymbolTableCollector extends AJmmVisitor<MapSymbolTable, Boolean> {
 
@@ -15,8 +15,8 @@ public class SymbolTableCollector extends AJmmVisitor<MapSymbolTable, Boolean> {
         addVisit("ImportDecl", this::visitImportDecl);
         addVisit("ClassDeclaration", this::visitClassDeclaration);
         addVisit("VarDeclaration", this::visitVarDeclaration);
-        addVisit("MainMethodDeclaration", this::visitMainMethodDeclaration);
-        //addVisit("InstanceMethodDeclaration", this::)
+        addVisit("MainMethodDeclaration", this::visitMethodDeclaration);
+        addVisit("InstanceMethodDeclaration", this::visitMethodDeclaration);
     }
 
     public Boolean visitProgram(JmmNode program, MapSymbolTable symbolTable) {
@@ -41,28 +41,25 @@ public class SymbolTableCollector extends AJmmVisitor<MapSymbolTable, Boolean> {
         symbolTable.setSuperName(classDeclaration.get("baseClassName"));
 
         for (var child : classDeclaration.getChildren()) {
-            if (child.getKind() == "VarDeclaration"){
-                visitFieldDeclaration(child, symbolTable);
-            } else {
-                visit(child, symbolTable);
-            }
+            visit(child, symbolTable);
         }
 
         return true;
     }
 
-    private Boolean visitFieldDeclaration(JmmNode varDeclaration, MapSymbolTable symbolTable) {
-        var type = varDeclaration.get("type");
-        symbolTable.addField(new Symbol(new Type(varDeclaration.get("type"), false), varDeclaration.get("name")));
+    private Boolean visitVarDeclaration(JmmNode varDeclaration, MapSymbolTable symbolTable){
+        String type = varDeclaration.get("type");
+        Boolean isArray = type.endsWith("[]");
+        if (isArray) {
+            type = type.substring(0, type.length() - 2);
+        }
+        symbolTable.addField(new Symbol(new Type(type, isArray), varDeclaration.get("name")));
         return true;
     }
 
-    private Boolean visitVarDeclaration(JmmNode varDeclaration, Method method){
-        return true;
-    }
-
-    private Boolean visitMainMethodDeclaration(JmmNode mainMethodDeclaration, MapSymbolTable symbolTable) {
-        System.out.println("inside method");
+    private Boolean visitMethodDeclaration(JmmNode methodDeclaration, MapSymbolTable symbolTable) {
+        MethodCollector collector = new MethodCollector(methodDeclaration);
+        symbolTable.addMethod(collector.getMethod());
         return true;
     }
 }

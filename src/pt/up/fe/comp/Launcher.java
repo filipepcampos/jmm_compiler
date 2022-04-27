@@ -13,10 +13,16 @@ import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
 import pt.up.fe.comp.SymbolTableCollector;
 import pt.up.fe.comp.MapSymbolTable;
+import pt.up.fe.comp.JasminGenerator;
+import pt.up.fe.comp.jmm.ollir.OllirResult;
+
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class Launcher {
 
     public static void main(String[] args) {
+        /*
         SpecsSystem.programStandardInit();
 
         SpecsLogs.info("Executing with args: " + Arrays.toString(args));
@@ -31,6 +37,7 @@ public class Launcher {
         }
         String input = SpecsIo.read(inputFile);
 
+        
         // Create config
         Map<String, String> config = new HashMap<>();
         config.put("inputFile", args[0]);
@@ -66,6 +73,14 @@ public class Launcher {
         SymbolTableCollector collector = new SymbolTableCollector();
         collector.visit(rootNode, symbolTable);
         System.out.println(symbolTable.print());
+        */
+
+        String content = SpecsIo.read("./test/fixtures/public/ollir/myclass3.ollir");
+        System.out.println(content);
+        OllirResult ollirResult = new OllirResult(content, new HashMap<String, String>());
+
+        JasminGenerator generator = new JasminGenerator();
+        generator.toJasmin(ollirResult);
 
         // ... add remaining stages
     }

@@ -1,4 +1,4 @@
-package pt.up.fe.comp;
+package pt.up.fe.comp.analysis;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Type;
@@ -8,7 +8,6 @@ import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.report.Stage;
 import java.util.List;
-import java.util.ArrayList;
 
 public class MethodAnalysisVisitor extends PreorderJmmVisitor<List<Report>, Type> {
     String methodSignature;
@@ -33,13 +32,14 @@ public class MethodAnalysisVisitor extends PreorderJmmVisitor<List<Report>, Type
         addVisit("ArrayAccess", this::visitArrayAccess);
         addVisit("ArrayInitialization", this::visitArrayInitialization);
         addVisit("ClassInitialization", this::visitClassInitialization);
+        addVisit("visitBool", this::visitBool);
     }
 
-    public Type visitIntLiteral(JmmNode node, List<Report> reports){
+    private Type visitIntLiteral(JmmNode node, List<Report> reports){
         return new Type("int", false);
     }
 
-    public Symbol getSymbolByName(String name){
+    private Symbol getSymbolByName(String name){
         for(Symbol s : variables){
             if(name.equals(s.getName())){
                 return s;
@@ -48,7 +48,7 @@ public class MethodAnalysisVisitor extends PreorderJmmVisitor<List<Report>, Type
         return null;
     }
 
-    public Type visitId(JmmNode node, List<Report> reports){
+    private Type visitId(JmmNode node, List<Report> reports){
         String name = node.get("name");
         
         if(node.getJmmParent().getKind().equals("ClassMethod")){
@@ -57,24 +57,22 @@ public class MethodAnalysisVisitor extends PreorderJmmVisitor<List<Report>, Type
 
         Symbol symbol = getSymbolByName(name);
         if(symbol == null){
-            // TODO: ask how to get Line 
-            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Symbol " + name + " not defined."));
+            reports.add(createSemanticError(node, "Symbol " + name + " is not defined." ));
             return new Type(null, false);
         }
         return symbol.getType();
     }
 
-    public Type visitLengthOp(JmmNode node, List<Report> reports){
+    private Type visitLengthOp(JmmNode node, List<Report> reports){
         Type childType = visit(node.getJmmChild(0));
         if(!childType.isArray()){
-            // TODO: ask how to get Line 
-            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Symbol is not an array."));
+            reports.add(createSemanticError(node, "Symbol is not an array."));
             return new Type(null, false);
         }
         return new Type("int", false);
     }
 
-    public Type visitBinaryOp(JmmNode node, List<Report> reports){
+    private Type visitBinaryOp(JmmNode node, List<Report> reports){
         String op = node.get("op");
         if(node.getNumChildren() != 2){
             // TODO: Error?
@@ -91,14 +89,14 @@ public class MethodAnalysisVisitor extends PreorderJmmVisitor<List<Report>, Type
                 if(firstChildType.equals(boolType) && secondChildType.equals(boolType)){
                     return boolType;
                 } else {
-                    reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Invalid types for '&&' op"));
+                    reports.add(createSemanticError(node, "Invalid types for '&&' op"));
                 }
                 break;
             case "LOW":
                 if(firstChildType.equals(intType) && secondChildType.equals(intType)){
                     return boolType;
                 } else {
-                    reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Invalid types for '<' op"));
+                    reports.add(createSemanticError(node, "Invalid types for '<' op"));
                 }
                 break;
             case "ADD":
@@ -109,13 +107,13 @@ public class MethodAnalysisVisitor extends PreorderJmmVisitor<List<Report>, Type
                     return intType;
                 }
                 else{
-                    reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Invalid type for " + op ));
+                    reports.add(createSemanticError(node, "Invalid type for " + op ));
                 }
         }
         return new Type(null, false);
     }
 
-    public Type visitClassMethod(JmmNode node, List<Report> reports){
+    private Type visitClassMethod(JmmNode node, List<Report> reports){
         String methodName = node.get("name");
 
         if(node.getNumChildren() != 2){
@@ -133,15 +131,13 @@ public class MethodAnalysisVisitor extends PreorderJmmVisitor<List<Report>, Type
 
 
         if(className == "this"){
-            for(String mName : symbolTable.getMethods()){
-                if(methodName.equals(mName)){
-                    return symbolTable.getReturnType(methodName);
-                }
+            if(symbolTable.getMethods().contains(methodName)){
+                return symbolTable.getReturnType(methodName);
             }
             if(symbolTable.getSuper() != null){
                 return new Type(null, false);
             }
-            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Method does not exist"));
+            reports.add(createSemanticError(node, "Method " + methodName + " does not exist."));
         } else {
             // TODO 
         }
@@ -151,32 +147,32 @@ public class MethodAnalysisVisitor extends PreorderJmmVisitor<List<Report>, Type
         return new Type(null, false);
     }
 
-    public Type visitCondition(JmmNode node, List<Report> reports){
+    private Type visitCondition(JmmNode node, List<Report> reports){
         if(node.getNumChildren() != 1){
             // TODO: Error?
         }
         Type childType = visit(node.getJmmChild(0));
         if(!childType.equals(new Type("boolean", false))){
-            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Condition child is not a boolean"));
+            reports.add(createSemanticError(node, "Condition child is not a boolean"));
         }
         return new Type(null, false);
     }
 
-    public Type visitAssignment(JmmNode node, List<Report> reports){
+    private Type visitAssignment(JmmNode node, List<Report> reports){
         if(node.getNumChildren() != 1){
             // TODO: Error?
         }
         Type childType = visit(node.getJmmChild(0));
         Symbol symbol = getSymbolByName(node.get("name"));
-        System.out.println(node.get("name") + " - " + symbol + " -- " + childType);
+        System.out.println(node.get("name") + " - " + symbol + " -- " + childType + "((" + node.get("line") + "))");
         if(!childType.equals(symbol.getType())){
             System.out.println("debug -> " + node.get("name") + " " + symbol + "  = " + childType);
-            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Invalid assignment type"));
+            reports.add(createSemanticError(node, "Invalid assignment type"));
         }
         return new Type(null, false);
     }
 
-    public Type visitArrayAccess(JmmNode node, List<Report> reports){
+    private Type visitArrayAccess(JmmNode node, List<Report> reports){
         if(node.getNumChildren() != 2){
             // TODO: Error?
         }
@@ -185,26 +181,36 @@ public class MethodAnalysisVisitor extends PreorderJmmVisitor<List<Report>, Type
         Symbol arraySymbol = getSymbolByName(arrayName);
 
         if(arraySymbol == null){
-            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Symbol " + arrayName + " not defined."));
+            reports.add(createSemanticError(node, "Symbol " + arrayName + " not defined."));
         }
 
         Type type = arraySymbol.getType();
 
         if(!type.isArray()){
-            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Symbol " + arrayName + " is not an array."));
+            reports.add(createSemanticError(node, "Symbol " + arrayName + " is not an array."));
         }
         if(!(visit(node.getJmmChild(1)).equals(new Type("int", false)))){
-            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC, -1, "Invalid array index"));
+            reports.add(createSemanticError(node, "Invalid array index"));
         }
         return new Type(type.getName(), false); // TODO: Are arrays inside arrays allowed?
     }
 
-    public Type visitArrayInitialization(JmmNode node, List<Report> reports){
+    private Type visitArrayInitialization(JmmNode node, List<Report> reports){
         return new Type("int", true);
     }
 
-    public Type visitClassInitialization(JmmNode node, List<Report> reports){
+    private Type visitClassInitialization(JmmNode node, List<Report> reports){
         return new Type(node.get("name"), false);
+    }
+
+    private Type visitBool(JmmNode node, List<Report> reports){
+        return new Type("boolean", false);
+    }
+
+    private Report createSemanticError(JmmNode node, String message){
+        return new Report(ReportType.ERROR, Stage.SEMANTIC,
+                Integer.parseInt(node.get("line")), Integer.parseInt(node.get("col")),
+                message);
     }
 }
 

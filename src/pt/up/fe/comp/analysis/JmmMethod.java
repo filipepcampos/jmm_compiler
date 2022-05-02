@@ -1,4 +1,4 @@
-package pt.up.fe.comp;
+package pt.up.fe.comp.analysis;
 
 import java.util.Map;
 import java.util.HashMap;

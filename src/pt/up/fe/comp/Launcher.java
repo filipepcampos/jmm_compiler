@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import pt.up.fe.comp.analysis.JmmAnalyser;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
@@ -12,9 +13,6 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
-import pt.up.fe.comp.SymbolTableCollector;
-import pt.up.fe.comp.MapSymbolTable;
-import pt.up.fe.comp.JmmAnalyser;
 
 public class Launcher {
 
@@ -44,7 +42,7 @@ public class Launcher {
         SimpleParser parser = new SimpleParser();
 
         // Parse stage
-        JmmParserResult parserResult = parser.parse(input, config);
+        JmmParserResult parserResult = parser.parse(input, "Program", config);
 
         // Check if there are parsing errors
         parserResult.getReports().stream()
@@ -55,7 +53,7 @@ public class Launcher {
                     System.out.println(report.getMessage());
                 }
             });
-        
+
         JmmNode rootNode = parserResult.getRootNode();
         if (rootNode != null) {
             System.out.println(rootNode.toTree());

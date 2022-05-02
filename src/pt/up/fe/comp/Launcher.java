@@ -81,7 +81,6 @@ public class Launcher {
 
         OllirToJasmin converter = new OllirToJasmin();
         converter.toJasmin(ollirResult);
-
         // ... add remaining stages
     }
 

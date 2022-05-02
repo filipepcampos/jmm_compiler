@@ -1,6 +1,5 @@
 package pt.up.fe.comp;
 
-import pt.up.fe.comp.jmm.jasmin.JasminBackend;
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import org.specs.comp.ollir.ClassUnit;
@@ -9,50 +8,61 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.LinkedList;
 
-public class JasminGenerator implements JasminBackend {
+public class JasminGenerator {
 
-    public JasminGenerator() {
+    private final ClassUnit classUnit;
+
+    public JasminGenerator(ClassUnit classUnit) {
+        this.classUnit = classUnit;
         this.reset();
     }
 
-    public JasminResult toJasmin(OllirResult ollirResult) {
+    public String getFullyQualifiedName(String className) {
+        for (String importString : this.classUnit.getImports()) {
+            if (importString.endsWith(className)) {
+                return importString.replace('.', '/');
+            }
+        }
+
+        throw new RuntimeException("Could not find import for class " + className);
+    }
+
+    public JasminResult convert() {
         this.reset();
-        ClassUnit classUnit = ollirResult.getOllirClass();
         classUnit.buildVarTables();
         classUnit.show();
         
-        System.out.println(this.convertClass(classUnit));
-        System.out.println(this.convertFields(classUnit));
+        System.out.println(this.convertClass());
+        System.out.println(this.convertFields());
         
         return null;
     }
 
-    private String convertClass(ClassUnit classUnit) {
+    private String convertClass() {
         /*
         .class public HelloWorld
         .super java/lang/Object
         */
         String classDeclaration = this.concatenateStrings(Arrays.asList(
-            ".class",
-            classUnit.getClassAccessModifier().name(),
-            classUnit.getClassName()            
+            ".class public",
+            this.classUnit.getClassName()            
         ));
 
         String superClass = classUnit.getSuperClass();
         String superDeclaration = this.concatenateStrings(Arrays.asList(
             ".super",
-            superClass == null ? "java/lang/Object" : superClass
+            superClass == null ? "java/lang/Object" : this.getFullyQualifiedName(superClass)
         ));
 
         return classDeclaration + superDeclaration;
     }
 
-    private String convertFields(ClassUnit classUnit) {
+    private String convertFields() {
         /*
         .field <access-spec> <field-name> <descriptor> [ = <value> ]
         */
         List<String> fields = new LinkedList<String>();
-        for (Field field : classUnit.getFields()) {
+        for (Field field : this.classUnit.getFields()) {
             String fieldDeclaration = this.concatenateStrings(Arrays.asList(
                 ".field",
                 field.getFieldAccessModifier().name(),

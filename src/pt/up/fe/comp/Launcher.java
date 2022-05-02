@@ -13,7 +13,7 @@ import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
 import pt.up.fe.comp.SymbolTableCollector;
 import pt.up.fe.comp.MapSymbolTable;
-import pt.up.fe.comp.JasminGenerator;
+import pt.up.fe.comp.OllirToJasmin;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 
 import java.nio.file.Files;
@@ -79,8 +79,8 @@ public class Launcher {
         System.out.println(content);
         OllirResult ollirResult = new OllirResult(content, new HashMap<String, String>());
 
-        JasminGenerator generator = new JasminGenerator();
-        generator.toJasmin(ollirResult);
+        OllirToJasmin converter = new OllirToJasmin();
+        converter.toJasmin(ollirResult);
 
         // ... add remaining stages
     }

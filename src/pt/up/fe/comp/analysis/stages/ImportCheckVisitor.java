@@ -60,10 +60,9 @@ public class ImportCheckVisitor extends AJmmVisitor<List<Report>, Boolean> {
             return true;
         }
         if(!imports.contains(type) && !type.equals(symbolTable.getClassName())){
-            Report debug = new Report(ReportType.ERROR, Stage.SEMANTIC,
-            Integer.parseInt(node.get("line")), Integer.parseInt(node.get("col")),
-            "Class " + type + " has not been imported.");
-            reports.add(debug);
+            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC,
+                Integer.parseInt(node.get("line")), Integer.parseInt(node.get("col")),
+                "Class " + type + " has not been imported."));
         }
         return true;
     }

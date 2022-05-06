@@ -251,6 +251,13 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitArrayInitialization(JmmNode node, List<Report> reports){
+        if(node.getNumChildren() != 1){
+            // TODO: Throw error ?
+        }
+        JmmType childType = visit(node.getJmmChild(0), reports);
+        if(!childType.equals(new JmmType("int", false))){
+            reports.add(createSemanticError(node, "Invalid type for array size"));
+        }
         return new JmmType("int", true);
     }
 

@@ -167,19 +167,43 @@ public class JasminGenerator {
                 return getCode((AssignInstruction) instruction);
             case CALL:
                 return getCode((CallInstruction) instruction);
+            case GOTO:
+                throw new NotImplementedException(instruction.getInstType());
+            case BRANCH:
+                throw new NotImplementedException(instruction.getInstType());
+            case RETURN:
+                throw new NotImplementedException(instruction.getInstType());
+            case GETFIELD:
+                throw new NotImplementedException(instruction.getInstType());
+            case UNARYOPER:
+                throw new NotImplementedException(instruction.getInstType());
+            case BINARYOPER:
+                throw new NotImplementedException(instruction.getInstType());
+            case NOPER:
+                throw new NotImplementedException(instruction.getInstType());
             default:
-                throw new NotImplementedException("Not implemented instruction " + instruction.getInstType());
+                throw new RuntimeException("Unrecognized instruction");
         }
     }
 
     private String getCode(CallInstruction method) {
         switch (method.getInvocationType()) {
-            case invokestatic:
-                return this.getCodeInvokeStatic(method);
+            case invokevirtual:
+                throw new NotImplementedException(method.getInvocationType());
+            case invokeinterface:
+                throw new NotImplementedException(method.getInvocationType());
             case invokespecial:
                 return this.getCodeInvokeSpecial(method);
-            default:
+            case invokestatic:
+                return this.getCodeInvokeStatic(method);
+            case NEW:
                 throw new NotImplementedException(method.getInvocationType());
+            case arraylength:
+                throw new NotImplementedException(method.getInvocationType());
+            case ldc:
+                throw new NotImplementedException(method.getInvocationType());
+            default:
+                throw new RuntimeException("Unrecognized call instruction");
         }
     }
 

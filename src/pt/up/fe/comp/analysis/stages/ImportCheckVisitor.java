@@ -15,13 +15,12 @@ public class ImportCheckVisitor extends AJmmVisitor<List<Report>, Boolean> {
     SymbolTable symbolTable;
     List<String> imports;
 
-    public ImportCheckVisitor(SymbolTable symbolTable) {
+    public ImportCheckVisitor(SymbolTable symbolTable) { 
         this.symbolTable = symbolTable;
         this.imports = new ArrayList<>();
         for(String name : symbolTable.getImports()){
-            String[] splitImport = name.split(".", -1);
-            String className = splitImport[splitImport.length - 1];
-            System.out.println(className);
+            String[] splitImport = name.split("\\.");
+            String className = splitImport[splitImport.length - 1]; 
             imports.add(className);
         }
         
@@ -42,28 +41,29 @@ public class ImportCheckVisitor extends AJmmVisitor<List<Report>, Boolean> {
     private Boolean visitClassDeclaration(JmmNode node, List<Report> reports){
         Optional<String> baseClassName = node.getOptional("baseClassName");
         baseClassName.ifPresent(name -> {
-            System.out.println("Got the baseclassname: " + baseClassName);
-            for(String s : imports){
-                System.out.println("  " + s);
-            }
             if(!imports.contains(name)){
                 reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC,
                 Integer.parseInt(node.get("line")), Integer.parseInt(node.get("col")),
                 "Super class " + name + " has not been imported."));
             }
         });
-        return true;
+        return defaultVisit(node, reports);
     }
 
     private Boolean visitVarDeclaration(JmmNode node, List<Report> reports){
         String type = node.get("type");
-        if(type.equals("int") || type.equals("boolean")){
+        Boolean isArray = type.endsWith("[]");
+        if (isArray) {
+            type = type.substring(0, type.length() - 2);
+        }
+        if(type.equals("int") || type.equals("boolean") || type.equals("String")){
             return true;
         }
         if(!imports.contains(type) && !type.equals(symbolTable.getClassName())){
-            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC,
+            Report debug = new Report(ReportType.ERROR, Stage.SEMANTIC,
             Integer.parseInt(node.get("line")), Integer.parseInt(node.get("col")),
-            "Class " + type + " has not been imported."));
+            "Class " + type + " has not been imported.");
+            reports.add(debug);
         }
         return true;
     }

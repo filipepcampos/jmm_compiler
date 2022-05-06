@@ -20,6 +20,14 @@ public class MethodImportCheckVisitor extends PreorderJmmVisitor<List<Report>, B
         this.imports = imports;
         addVisit("Parameter", this::visitDeclaration);
         addVisit("VarDeclaration", this::visitDeclaration);
+        setDefaultVisit(this::defaultVisit);
+    }
+
+    private Boolean defaultVisit(JmmNode node, List<Report> reports){
+        for(var child : node.getChildren()){
+            visit(child, reports);
+        }
+        return true;
     }
 
     private Boolean visitDeclaration(JmmNode node, List<Report> reports){

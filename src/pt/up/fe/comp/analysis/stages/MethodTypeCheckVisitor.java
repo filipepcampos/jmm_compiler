@@ -1,5 +1,5 @@
 package pt.up.fe.comp.analysis.stages;
-import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
+import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
@@ -12,7 +12,7 @@ import pt.up.fe.comp.jmm.report.Stage;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, JmmType> {
+public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     String methodSignature;
     SymbolTable symbolTable;
     List<Symbol> variables;
@@ -40,10 +40,15 @@ public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Jmm
         addVisit("ExpressionInParentheses", this::visitExpressionInParentheses);
         addVisit("ArrayAssignment", this::visitArrayAssignment);
         addVisit("Argument", this::visitArgument);
-        /*
-        VarDeclaration / Arguments / Parameter - não necessário
-        */
-        // TODO: ReturnExpression?
+        addVisit("ReturnExpression", this::visitReturnExpression);
+        setDefaultVisit(this::defaultVisit);
+    }
+
+    private JmmType defaultVisit(JmmNode node, List<Report> reports){
+        for(var child : node.getChildren()){
+            visit(child, reports);
+        }
+        return new JmmType(null, false);
     }
 
     private JmmType visitIntLiteral(JmmNode node, List<Report> reports){
@@ -69,16 +74,16 @@ public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Jmm
         Symbol symbol = getSymbolByName(name);
         if(symbol == null){
             reports.add(createSemanticError(node, "Symbol " + name + " is not defined." ));
-            return new JmmType(null, false);
+            return new JmmType("int", false); // TODO: Returning null crashes program before report is parsed
         }
         return new JmmType(symbol.getType());
     }
 
     private JmmType visitLengthOp(JmmNode node, List<Report> reports){
-        JmmType childType = visit(node.getJmmChild(0));
+        JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.isArray()){
             reports.add(createSemanticError(node, "Symbol is not an array."));
-            return new JmmType(null, false);
+            //return new JmmType(null, false);  // TODO: Returning null crashes program before report is parsed
         }
         return new JmmType("int", false);
     }
@@ -121,7 +126,7 @@ public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Jmm
                     reports.add(createSemanticError(node, "Invalid type for " + op ));
                 }
         }
-        return new JmmType(null, false);
+        return new JmmType("int", false); // TODO:Returning null crashes program before report is parsed
     }
 
     private JmmType visitClassMethod(JmmNode node, List<Report> reports){
@@ -150,7 +155,7 @@ public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Jmm
                 
                 for(int i = 0; i < methodParameters.size(); ++i){
                     Type parameterType = methodParameters.get(i).getType();
-                    JmmType argumentType = visit(argumentsNode.getJmmChild(i));
+                    JmmType argumentType = visit(argumentsNode.getJmmChild(i), reports);
                     if(!argumentType.equals(parameterType)){
                         methodCallReports.add(createSemanticError(node, "Argument type doesn't match required parameter type"));
                     }
@@ -167,21 +172,19 @@ public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Jmm
             }
             reports.add(createSemanticError(node, "Method " + methodName + " does not exist."));
         } else {
-
-            // TODO: Check if class is imported?
             return new JmmType(null, false, true);
         }
         // TODO: Method doesnt exist
 
     
-        return new JmmType(null, false);
+        return new JmmType("int", false); // TODO: Returning null crashes program before report is parsed
     }
 
     private JmmType visitCondition(JmmNode node, List<Report> reports){
         if(node.getNumChildren() != 1){
             // TODO: Error?
         }
-        JmmType childType = visit(node.getJmmChild(0));
+        JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(new JmmType("boolean", false))){
             reports.add(createSemanticError(node, "Condition child is not a boolean"));
         }
@@ -192,11 +195,9 @@ public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Jmm
         if(node.getNumChildren() != 1){
             // TODO: Error?
         }
-        JmmType childType = visit(node.getJmmChild(0));
+        JmmType childType = visit(node.getJmmChild(0), reports);
         Symbol symbol = getSymbolByName(node.get("name"));
-        System.out.println(node.get("name") + " - " + symbol + " -- " + childType + "((" + node.get("line") + "))");
         if(!childType.equals(symbol.getType())){
-            System.out.println("debug -> " + node.get("name") + " " + symbol + "  = " + childType);
             reports.add(createSemanticError(node, "Invalid assignment type"));
         }
         return new JmmType(null, false);
@@ -207,14 +208,14 @@ public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Jmm
             // TODO: Error?
         }
 
-        JmmType indexType = visit(node.getJmmChild(0));
+        JmmType indexType = visit(node.getJmmChild(0), reports);
         if(!indexType.equals(new JmmType("int", false))){
             reports.add(createSemanticError(node, "Invalid type for array index"));
         }
 
         Symbol symbol = getSymbolByName(node.get("name"));
         Type symbolType = symbol.getType();
-        JmmType assignType = visit(node.getJmmChild(1));
+        JmmType assignType = visit(node.getJmmChild(1), reports);
 
         if(!symbolType.isArray()){
             reports.add(createSemanticError(node, "Symbol is not an array"));
@@ -243,7 +244,7 @@ public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Jmm
         if(!type.isArray()){
             reports.add(createSemanticError(node, "Symbol " + arrayName + " is not an array."));
         }
-        if(!(visit(node.getJmmChild(1)).equals(new JmmType("int", false)))){
+        if(!(visit(node.getJmmChild(1), reports).equals(new JmmType("int", false)))){
             reports.add(createSemanticError(node, "Invalid array index"));
         }
         return new JmmType(type.getName(), false); // TODO: Are arrays inside arrays allowed?
@@ -268,10 +269,8 @@ public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Jmm
         if(!node.get("op").equals("NEG")){
             // TODO: Throw error
         }
-        JmmType childType = visit(node.getJmmChild(0));
-        System.out.println("UNARY_OP: " + node.getJmmChild(0) + "  " + childType);
+        JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(new JmmType("boolean",false))){
-            System.out.println("NOT A BOOLEAN");
             reports.add(createSemanticError(node, "Invalid type for NEG op"));
         }
         return childType;
@@ -281,14 +280,25 @@ public class MethodTypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Jmm
         if(node.getNumChildren() != 1){
             // TODO: Throw error?
         }
-        return visit(node.getJmmChild(0));
+        return visit(node.getJmmChild(0), reports);
     }
 
     private JmmType visitArgument(JmmNode node, List<Report> reports){
         if(node.getNumChildren() != 1){
             // TODO: Throw error?
         }
-        return visit(node.getJmmChild(0));
+        return visit(node.getJmmChild(0), reports);
+    }
+
+    private JmmType visitReturnExpression(JmmNode node, List<Report> reports){
+        if(node.getNumChildren() != 1){
+            // TODO: Throw error?
+        }
+        JmmType childType = visit(node.getJmmChild(0), reports);
+        if(!childType.equals(symbolTable.getReturnType(this.methodSignature))){
+            reports.add(createSemanticError(node, "Incompatible return type"));
+        }
+        return new JmmType(null, false);
     }
 
     private Report createSemanticError(JmmNode node, String message){

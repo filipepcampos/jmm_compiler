@@ -1,5 +1,7 @@
 package pt.up.fe.comp.analysis;
 
+import pt.up.fe.comp.analysis.stages.ImportCheckVisitor;
+import pt.up.fe.comp.analysis.stages.TypeCheckVisitor;
 import pt.up.fe.comp.analysis.table.SymbolTableBuilder;
 import pt.up.fe.comp.analysis.table.SymbolTableCollector;
 import pt.up.fe.comp.jmm.analysis.JmmAnalysis;
@@ -17,9 +19,13 @@ public class JmmAnalyser implements JmmAnalysis {
         SymbolTableCollector collector = new SymbolTableCollector();
         collector.visit(parserResult.getRootNode(), symbolTable);
 
-        AnalysisVisitor analysisVisitor = new AnalysisVisitor(symbolTable);
         List<Report> reports = new ArrayList<>();
+
+        TypeCheckVisitor analysisVisitor = new TypeCheckVisitor(symbolTable);
         analysisVisitor.visit(parserResult.getRootNode(), reports);
+
+        ImportCheckVisitor importVisitor = new ImportCheckVisitor(symbolTable);
+        importVisitor.visit(parserResult.getRootNode(), reports);
 
         return new JmmSemanticsResult(parserResult, symbolTable, reports); 
     } 

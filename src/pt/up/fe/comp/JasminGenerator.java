@@ -1,7 +1,6 @@
 package pt.up.fe.comp;
 
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
-import pt.up.fe.specs.util.classmap.FunctionClassMap;
 import pt.up.fe.specs.util.exceptions.NotImplementedException;
 
 import org.specs.comp.ollir.ClassUnit;
@@ -9,11 +8,14 @@ import org.specs.comp.ollir.Field;
 import org.specs.comp.ollir.Method;
 import org.specs.comp.ollir.Type;
 import org.specs.comp.ollir.ArrayType;
+import org.specs.comp.ollir.ClassType;
 import org.specs.comp.ollir.CallInstruction;
+import org.specs.comp.ollir.AssignInstruction;
 import org.specs.comp.ollir.ElementType;
 import org.specs.comp.ollir.Instruction;
 import org.specs.comp.ollir.LiteralElement;
 import org.specs.comp.ollir.Operand;
+import org.specs.comp.ollir.Element;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +31,9 @@ public class JasminGenerator {
     }
 
     public String getFullyQualifiedName(String className) {
+        if (className == null) {
+            return "java/lang/Object";
+        }
         for (String importString : this.classUnit.getImports()) {
             if (importString.endsWith(className)) {
                 return importString.replace('.', '/');
@@ -37,57 +42,74 @@ public class JasminGenerator {
         throw new RuntimeException("Could not find import for class " + className);
     }
 
-    private String concatenateStrings(List<String> strings) {
+    public String getArgumentCode(Element element) {
+        return "";
+    }
+
+    private String concatenateStrings(List<String> strings, String delim) {
         StringBuilder builder = new StringBuilder();
         for (String str : strings) {
             builder.append(str);
-            builder.append(" ");
+            builder.append(delim);
         }
         builder.append("\n");
         return builder.toString();
     }
 
+    private String concatenateStrings(List<String> strings) {
+        return this.concatenateStrings(strings, " ");
+    }
+
     private String getJasminType(Type type) {
-        if (type instanceof ArrayType) {
-            return this.getJasminType((ArrayType) type);
+        ElementType elementType = type.getTypeOfElement();
+        StringBuilder result = new StringBuilder();
+
+        if (elementType == ElementType.ARRAYREF) {
+            ArrayType arrayType = (ArrayType) type;
+            elementType = arrayType.getTypeOfElements();
+            result.append("[".repeat(arrayType.getNumDimensions()));
         }
-        return getJasminType(type.getTypeOfElement());
-    }
 
-    private String getJasminType(ArrayType type) {
-        return "[" + getJasminType(type.getTypeOfElements());
-    }
-
-    private String getJasminType(ElementType type) {
-        switch (type) {
+        switch (elementType) {
             case STRING:
-                return "Ljava/lang/String;";
+                result.append("Ljava/lang/String;");
+                break;
             case VOID:
-                return "V";
+                result.append("V");
+                break;
             case INT32:
-                return "I";
+                result.append("I");
+                break;
             case BOOLEAN:
-                return "Z"; // TODO: Complete with other types
+                result.append("Z");
+                break;
+            case OBJECTREF:
+                result.append("L").append(this.getFullyQualifiedName(((ClassType) type).getName())).append(";");
+                break;
             default:
                 throw new NotImplementedException("Not implemented type " + type);
         }
+
+        return result.toString();
     }
 
-    private String getCode(Instruction method) {
-        FunctionClassMap<Instruction, String> instructionMap = new FunctionClassMap<>();
-        
-        instructionMap.put(CallInstruction.class, this::getCode);
-        instructionMap.put(CallInstruction.class, this::getCode);
-
-        instructionMap.apply(method);
-
-        throw new NotImplementedException(method.getClass());
+    private String getCode(Instruction instruction) {
+        switch (instruction.getInstType()) {
+            case ASSIGN:
+                return getCode((AssignInstruction) instruction);
+            case CALL:
+                return getCode((CallInstruction) instruction);
+            default:
+                throw new NotImplementedException("Not implemented instruction " + instruction.getInstType());
+        }
     }
 
     private String getCode(CallInstruction method) {
         switch (method.getInvocationType()) {
             case invokestatic:
                 return this.getCodeInvokeStatic(method);
+            case invokespecial:
+                return this.getCodeInvokeSpecial(method);
             default:
                 throw new NotImplementedException(method.getInvocationType());
         }
@@ -96,23 +118,25 @@ public class JasminGenerator {
     private String getCodeInvokeStatic(CallInstruction method) {
         String methodClass = ((Operand) method.getFirstArg()).getName();
         String methodName = ((LiteralElement) method.getSecondArg()).getLiteral();
+        methodName = methodName.substring(1, methodName.length() - 1);
         return this.concatenateStrings(Arrays.asList(
-            "invokestatic",
-            this.getFullyQualifiedName(methodClass),
-            "/",
-            methodName,
-            "(",    // TODO: Arguments
-            ")",
+            "\tinvokestatic ",
+            this.getFullyQualifiedName(methodClass), "/", methodName,
+            "(", method.getListOfOperands().stream().map(element -> this.getArgumentCode(element)).collect(Collectors.joining()), ")",
             this.getJasminType(method.getReturnType())
-        ));
+        ), "");
+    }
+
+    private String getCodeInvokeSpecial(CallInstruction method) {
+        throw new NotImplementedException();
     }
 
     public JasminResult convert() {
         //classUnit.buildVarTables();
         //classUnit.show();
         
-        //System.out.println(this.convertClass());
-        //System.out.println(this.convertFields());
+        System.out.println(this.convertClass());
+        System.out.println(this.convertFields());
         System.out.println(this.convertMethods());
         
         return null;
@@ -122,19 +146,31 @@ public class JasminGenerator {
         /*
         .class public HelloWorld
         .super java/lang/Object
+
+        .method public <init>()V
+            aload_0
+            invokenonvirtual java/lang/Object/<init>()V
+            return
+        .end method
         */
         String classDeclaration = this.concatenateStrings(Arrays.asList(
             ".class public",
             this.classUnit.getClassName()            
         ));
 
-        String superClass = classUnit.getSuperClass();
+        String superClass = this.getFullyQualifiedName(classUnit.getSuperClass());
         String superDeclaration = this.concatenateStrings(Arrays.asList(
             ".super",
-            superClass == null ? "java/lang/Object" : this.getFullyQualifiedName(superClass)
+            superClass
         ));
 
-        return classDeclaration + superDeclaration;
+        String initializerDeclaration = this.concatenateStrings(Arrays.asList(
+            ".method public <init>()V\n\taload_0\n\tinvokenonvirtual ",
+            superClass,
+            "/<init>()V\n\treturn\n.end method"
+        ), "");
+
+        return classDeclaration + superDeclaration + initializerDeclaration;
     }
 
     private String convertFields() {
@@ -145,35 +181,34 @@ public class JasminGenerator {
         for (Field field : this.classUnit.getFields()) {
             String fieldDeclaration = this.concatenateStrings(Arrays.asList(
                 ".field",
-                field.getFieldAccessModifier().name(),
+                field.getFieldAccessModifier().name().toLowerCase(),
                 field.getFieldName(),
-                field.getFieldType().toString()
-                // TODO: GET INITIAL VALUE
+                this.getJasminType(field.getFieldType())
             ));
             fields.add(fieldDeclaration);
         }
         
-        return this.concatenateStrings(fields);
+        return this.concatenateStrings(fields, "");
     }
 
     private String convertMethods() {
         List<String> methods = new LinkedList<String>();
         for (Method method : this.classUnit.getMethods()) {
-            String methodAccess = method.getMethodAccessModifier().name().toLowerCase();
+            method.getVarTable();
+            String methodName = method.getMethodName();
             String methodDeclaration = this.concatenateStrings(Arrays.asList(
-                ".method",
-                methodAccess == "default" ? "" : methodAccess,
-                method.isStaticMethod() ? "static" : "",
-                method.getParams().stream().map(element -> this.getJasminType(element.getType())).collect(Collectors.joining()),
-                this.getJasminType(method.getReturnType()),
-                ".limit stack 99\n",
-                ".limit locals 99\n",
-                "return\n",
+                ".method public ", method.isStaticMethod() ? "static " : "", methodName,
+                "(", method.getParams().stream().map(element -> this.getJasminType(element.getType())).collect(Collectors.joining()), ")",
+                this.getJasminType(method.getReturnType()), "\n",
+                "\t.limit stack 99\n",
+                "\t.limit locals 99\n",
+                method.getInstructions().stream().map(instruction -> this.getCode(instruction)).collect(Collectors.joining()),
+                "\treturn\n",
                 ".end method"
-            ));
+            ), "");
             methods.add(methodDeclaration);
         }
         
-        return this.concatenateStrings(methods);
+        return this.concatenateStrings(methods, "");
     }
 }

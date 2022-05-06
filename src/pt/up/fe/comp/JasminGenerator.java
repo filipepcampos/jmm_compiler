@@ -2,25 +2,7 @@ package pt.up.fe.comp;
 
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import pt.up.fe.specs.util.exceptions.NotImplementedException;
-
-import org.specs.comp.ollir.ClassUnit;
-import org.specs.comp.ollir.Field;
-import org.specs.comp.ollir.Method;
-import org.specs.comp.ollir.Type;
-import org.specs.comp.ollir.ArrayType;
-import org.specs.comp.ollir.ClassType;
-import org.specs.comp.ollir.CallInstruction;
-import org.specs.comp.ollir.AssignInstruction;
-import org.specs.comp.ollir.ElementType;
-import org.specs.comp.ollir.Instruction;
-import org.specs.comp.ollir.LiteralElement;
-import org.specs.comp.ollir.Operand;
-import org.specs.comp.ollir.Element;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import java.util.LinkedList;
+import org.specs.comp.ollir.*;
 
 public class JasminGenerator {
 
@@ -30,10 +12,110 @@ public class JasminGenerator {
         this.classUnit = classUnit;
     }
 
-    public String getFullyQualifiedName(String className) {
-        if (className == null) {
-            return "java/lang/Object";
+    public JasminResult convert() {
+        StringBuilder result = new StringBuilder();
+        result.append(this.convertClass());
+        //result.append(this.convertMethods());
+
+        System.out.println(result);     // DEBUG
+        
+        return new JasminResult(result.toString());
+    }
+
+    private String convertClass() {
+        /*
+        .class public HelloWorld
+        .super java/lang/Object
+
+        .method public <init>()V
+            aload_0
+            invokenonvirtual java/lang/Object/<init>()V
+            return
+        .end method
+        */
+
+        StringBuilder result = new StringBuilder();
+
+        // .class directive
+        result.append(".class public ").append(this.classUnit.getClassName()).append("\n");
+
+        // .super directive
+        String superClass = classUnit.getSuperClass();
+        if (superClass != null) {
+            superClass = this.getFullyQualifiedName(superClass);
+        } else {
+            superClass = "java/lang/Object";
         }
+        result.append(".super ").append(superClass).append("\n");
+
+        // class fields
+        result.append(this.convertFields());
+
+        // initializer declaration
+        result.append(".method public <init>()V\n\taload_0\n\tinvokenonvirtual ").append(superClass).append("/<init>()V\n\treturn\n.end method\n");
+
+        return result.toString();
+    }
+
+    private String convertFields() {
+        /*
+        .field <access-spec> <field-name> <descriptor> [ = <value> ]
+        */
+
+        StringBuilder result = new StringBuilder();
+
+        for (Field field : this.classUnit.getFields()) {
+            result.append(".field ");
+            result.append(field.getFieldAccessModifier().name().toLowerCase()).append(" ");
+            result.append(field.getFieldName()).append(" ");
+            result.append(this.getJasminType(field.getFieldType())).append("\n");
+        }
+        
+        return result.toString();
+    }
+
+    private String convertMethods() {
+        /*
+        .method public static main([Ljava/lang/String;)V
+            .limit stack 99
+            .limit locals 99
+            ...
+            return
+        .end method
+        */
+
+        StringBuilder result = new StringBuilder();
+
+        for (Method method : this.classUnit.getMethods()) {
+            result.append(".method public ");
+
+            if (method.isStaticMethod()) {
+                result.append("static ");
+            }
+
+            result.append(method.getMethodName());
+
+            result.append("(");
+            for (Element param : method.getParams()) {
+                result.append(this.getJasminType(param.getType()));
+            }
+            result.append(")");
+
+            result.append(this.getJasminType(method.getReturnType())).append("\n");
+            
+            result.append("\t.limit stack 99\n\t.limit locals 99\n");
+
+            for (Instruction instruction : method.getInstructions()) {
+                result.append(this.getCode(instruction));
+            }
+
+            result.append("\treturn\n.end method\n");
+        }
+
+        return result.toString();
+    }
+
+    public String getFullyQualifiedName(String className) {
         for (String importString : this.classUnit.getImports()) {
             if (importString.endsWith(className)) {
                 return importString.replace('.', '/');
@@ -44,20 +126,6 @@ public class JasminGenerator {
 
     public String getArgumentCode(Element element) {
         return "";
-    }
-
-    private String concatenateStrings(List<String> strings, String delim) {
-        StringBuilder builder = new StringBuilder();
-        for (String str : strings) {
-            builder.append(str);
-            builder.append(delim);
-        }
-        builder.append("\n");
-        return builder.toString();
-    }
-
-    private String concatenateStrings(List<String> strings) {
-        return this.concatenateStrings(strings, " ");
     }
 
     private String getJasminType(Type type) {
@@ -116,99 +184,30 @@ public class JasminGenerator {
     }
 
     private String getCodeInvokeStatic(CallInstruction method) {
+        /*
+        invokestatic io/println(Ljava/lang/String;)V
+        */
+
+        StringBuilder result = new StringBuilder();
+
         String methodClass = ((Operand) method.getFirstArg()).getName();
         String methodName = ((LiteralElement) method.getSecondArg()).getLiteral();
         methodName = methodName.substring(1, methodName.length() - 1);
-        return this.concatenateStrings(Arrays.asList(
-            "\tinvokestatic ",
-            this.getFullyQualifiedName(methodClass), "/", methodName,
-            "(", method.getListOfOperands().stream().map(element -> this.getArgumentCode(element)).collect(Collectors.joining()), ")",
-            this.getJasminType(method.getReturnType())
-        ), "");
+
+        result.append("\tinvokestatic ").append(this.getFullyQualifiedName(methodClass)).append("/").append(methodName);
+
+        result.append("(");
+        for (Element param : method.getListOfOperands()) {
+            result.append(this.getArgumentCode(param));
+        }
+        result.append(")");
+
+        result.append(this.getJasminType(method.getReturnType())).append("\n");
+
+        return result.toString();
     }
 
     private String getCodeInvokeSpecial(CallInstruction method) {
         throw new NotImplementedException();
-    }
-
-    public JasminResult convert() {
-        //classUnit.buildVarTables();
-        //classUnit.show();
-        
-        System.out.println(this.convertClass());
-        System.out.println(this.convertFields());
-        System.out.println(this.convertMethods());
-        
-        return null;
-    }
-
-    private String convertClass() {
-        /*
-        .class public HelloWorld
-        .super java/lang/Object
-
-        .method public <init>()V
-            aload_0
-            invokenonvirtual java/lang/Object/<init>()V
-            return
-        .end method
-        */
-        String classDeclaration = this.concatenateStrings(Arrays.asList(
-            ".class public",
-            this.classUnit.getClassName()            
-        ));
-
-        String superClass = this.getFullyQualifiedName(classUnit.getSuperClass());
-        String superDeclaration = this.concatenateStrings(Arrays.asList(
-            ".super",
-            superClass
-        ));
-
-        String initializerDeclaration = this.concatenateStrings(Arrays.asList(
-            ".method public <init>()V\n\taload_0\n\tinvokenonvirtual ",
-            superClass,
-            "/<init>()V\n\treturn\n.end method"
-        ), "");
-
-        return classDeclaration + superDeclaration + initializerDeclaration;
-    }
-
-    private String convertFields() {
-        /*
-        .field <access-spec> <field-name> <descriptor> [ = <value> ]
-        */
-        List<String> fields = new LinkedList<String>();
-        for (Field field : this.classUnit.getFields()) {
-            String fieldDeclaration = this.concatenateStrings(Arrays.asList(
-                ".field",
-                field.getFieldAccessModifier().name().toLowerCase(),
-                field.getFieldName(),
-                this.getJasminType(field.getFieldType())
-            ));
-            fields.add(fieldDeclaration);
-        }
-        
-        return this.concatenateStrings(fields, "");
-    }
-
-    private String convertMethods() {
-        List<String> methods = new LinkedList<String>();
-        for (Method method : this.classUnit.getMethods()) {
-            method.getVarTable();
-            String methodName = method.getMethodName();
-            String methodDeclaration = this.concatenateStrings(Arrays.asList(
-                ".method public ", method.isStaticMethod() ? "static " : "", methodName,
-                "(", method.getParams().stream().map(element -> this.getJasminType(element.getType())).collect(Collectors.joining()), ")",
-                this.getJasminType(method.getReturnType()), "\n",
-                "\t.limit stack 99\n",
-                "\t.limit locals 99\n",
-                method.getInstructions().stream().map(instruction -> this.getCode(instruction)).collect(Collectors.joining()),
-                "\treturn\n",
-                ".end method"
-            ), "");
-            methods.add(methodDeclaration);
-        }
-        
-        return this.concatenateStrings(methods, "");
     }
 }

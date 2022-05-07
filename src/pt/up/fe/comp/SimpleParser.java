@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import pt.up.fe.comp.ParseException;
+import pt.up.fe.comp.ast.LineColAnnotator;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.parser.JmmParser;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
@@ -37,15 +38,7 @@ public class SimpleParser implements JmmParser {
             JmmGrammarParser parser = new JmmGrammarParser(SpecsIo.toInputStream(jmmCode));
             parser.Start();
 
-            Node root = parser.rootNode();
-            //root.dump("");
-
-            if (!(root instanceof JmmNode)) {
-                return JmmParserResult.newError(new Report(ReportType.WARNING, Stage.SYNTATIC, -1,
-                        "JmmNode interface not yet implemented, returning null root node"));
-            }
-
-            return new JmmParserResult((JmmNode) root, Collections.emptyList(), config);
+            return getJmmParserResult(config, parser);
 
         } catch (ParseException e) {
             Token token = e.getToken();
@@ -62,19 +55,26 @@ public class SimpleParser implements JmmParser {
             JmmGrammarParser parser = new JmmGrammarParser(SpecsIo.toInputStream(jmmCode));
             SpecsSystem.invoke(parser, startingRule);
 
-            Node root = parser.rootNode();
-            root.dump("");
-
-            if (!(root instanceof JmmNode)) {
-                return JmmParserResult.newError(new Report(ReportType.WARNING, Stage.SYNTATIC, -1,
-                        "JmmNode interface not yet implemented, returning null root node"));
-            }
-
-            return new JmmParserResult((JmmNode) root, Collections.emptyList(), config);
+            return getJmmParserResult(config, parser);
 
         } catch (Exception e) {
             // TODO: e.getCause()
             return JmmParserResult.newError(Report.newError(Stage.SYNTATIC, -1, -1, "Exception during parsing", e));
         }
+    }
+
+    private JmmParserResult getJmmParserResult(Map<String, String> config, JmmGrammarParser parser) {
+        Node root = parser.rootNode();
+        root.dump("");
+
+        if (!(root instanceof JmmNode)) {
+            return JmmParserResult.newError(new Report(ReportType.WARNING, Stage.SYNTATIC, -1,
+                    "JmmNode interface not yet implemented, returning null root node"));
+        }
+
+        LineColAnnotator annotator = new LineColAnnotator();
+        annotator.visit((JmmNode) root);
+
+        return new JmmParserResult((JmmNode) root, Collections.emptyList(), config);
     }
 }

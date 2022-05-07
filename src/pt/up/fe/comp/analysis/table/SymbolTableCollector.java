@@ -1,7 +1,4 @@
-package pt.up.fe.comp;
-import pt.up.fe.comp.MapSymbolTable;
-import pt.up.fe.comp.JmmMethod;
-import pt.up.fe.comp.MethodCollector;
+package pt.up.fe.comp.analysis.table;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
@@ -9,7 +6,7 @@ import pt.up.fe.comp.jmm.analysis.table.Type;
 import java.util.stream.Collectors;
 import java.util.Optional;
 
-public class SymbolTableCollector extends AJmmVisitor<MapSymbolTable, Boolean> {
+public class SymbolTableCollector extends AJmmVisitor<SymbolTableBuilder, Boolean> {
 
     public SymbolTableCollector() {
         addVisit("Program", this::visitProgram);
@@ -20,14 +17,14 @@ public class SymbolTableCollector extends AJmmVisitor<MapSymbolTable, Boolean> {
         addVisit("InstanceMethodDeclaration", this::visitMethodDeclaration);
     }
 
-    public Boolean visitProgram(JmmNode program, MapSymbolTable symbolTable) {
+    public Boolean visitProgram(JmmNode program, SymbolTableBuilder symbolTable) {
         for (var child : program.getChildren()) {
             visit(child, symbolTable);
         }
         return true;
     }
 
-    private Boolean visitImportDecl(JmmNode importDecl, MapSymbolTable symbolTable) {
+    private Boolean visitImportDecl(JmmNode importDecl, SymbolTableBuilder symbolTable) {
         var packageString = importDecl.get("name");
         var subpackagesString = importDecl.getChildren().stream()
                 .map(id -> id.get("name"))
@@ -37,12 +34,10 @@ public class SymbolTableCollector extends AJmmVisitor<MapSymbolTable, Boolean> {
         return true;
     }
 
-    private Boolean visitClassDeclaration(JmmNode classDeclaration, MapSymbolTable symbolTable) {
+    private Boolean visitClassDeclaration(JmmNode classDeclaration, SymbolTableBuilder symbolTable) {
         symbolTable.setClassName(classDeclaration.get("className"));
         Optional<String> baseClassName = classDeclaration.getOptional("baseClassName");
-        if(baseClassName.isPresent()){
-            symbolTable.setSuperName(classDeclaration.get("baseClassName"));
-        }
+        baseClassName.ifPresent(name -> symbolTable.setSuperName(name));
 
         for (var child : classDeclaration.getChildren()) {
             visit(child, symbolTable);
@@ -51,7 +46,7 @@ public class SymbolTableCollector extends AJmmVisitor<MapSymbolTable, Boolean> {
         return true;
     }
 
-    private Boolean visitVarDeclaration(JmmNode varDeclaration, MapSymbolTable symbolTable){
+    private Boolean visitVarDeclaration(JmmNode varDeclaration, SymbolTableBuilder symbolTable){
         String type = varDeclaration.get("type");
         Boolean isArray = type.endsWith("[]");
         if (isArray) {
@@ -61,7 +56,7 @@ public class SymbolTableCollector extends AJmmVisitor<MapSymbolTable, Boolean> {
         return true;
     }
 
-    private Boolean visitMethodDeclaration(JmmNode methodDeclaration, MapSymbolTable symbolTable) {
+    private Boolean visitMethodDeclaration(JmmNode methodDeclaration, SymbolTableBuilder symbolTable) {
         MethodCollector collector = new MethodCollector(methodDeclaration);
         symbolTable.addMethod(collector.getMethod());
         return true;

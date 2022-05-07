@@ -1,25 +1,26 @@
-package pt.up.fe.comp;
+package pt.up.fe.comp.analysis.table;
 
+import pt.up.fe.comp.analysis.JmmMethod;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
-import pt.up.fe.comp.jmm.ast.JmmNode;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class MapSymbolTable implements SymbolTable {
+public class SymbolTableBuilder implements SymbolTable {
     List<String> importList;
     String className;
     String superName;
-    Map<Symbol, Boolean> fields;
-    Map<String, JmmMethod> methods;    // methodSignature -> Method Class    
+    List<Symbol> fields;
+    Map<String, JmmMethod> methods;    // methodSignature -> Method Class
 
-    public MapSymbolTable() {
-        this.importList = new ArrayList<String>();
-        this.fields = new HashMap<>();
+    public SymbolTableBuilder() {
+        this.importList = new ArrayList<>();
+        this.fields = new ArrayList<>();
         this.methods = new HashMap<>();
     }
 
@@ -48,11 +49,11 @@ public class MapSymbolTable implements SymbolTable {
     }
     
     public List<Symbol> getFields(){
-        return new ArrayList<Symbol>(this.fields.keySet().stream().collect(Collectors.toList()));
+        return this.fields;
     }
 
     public void addField(Symbol field) {
-        this.fields.put(field, false);
+        this.fields.add(field);
     }
 
     public List<String> getMethods(){

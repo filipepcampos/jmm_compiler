@@ -1,4 +1,5 @@
-package pt.up.fe.comp;
+package pt.up.fe.comp.analysis.table;
+import pt.up.fe.comp.analysis.JmmMethod;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Type;

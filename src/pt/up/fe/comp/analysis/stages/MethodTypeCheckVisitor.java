@@ -11,19 +11,26 @@ import pt.up.fe.comp.jmm.report.Stage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     String methodSignature;
     SymbolTable symbolTable;
-    List<Symbol> variables;
+    Map<Symbol, Boolean> localVariables; // Boolean denotes if the variable has been initialized or not
+    List<Symbol> parametersAndFields; // Field initialization check is not implemented because it depends on the method call order
 
     public MethodTypeCheckVisitor(SymbolTable symbolTable, String methodSignature) {
         this.symbolTable = symbolTable;
         this.methodSignature = methodSignature;
-        
-        variables = symbolTable.getLocalVariables(methodSignature);
-        variables.addAll(symbolTable.getParameters(methodSignature));
-        variables.addAll(symbolTable.getFields());
+
+        localVariables = new HashMap<>();
+        for(var symbol : symbolTable.getLocalVariables(methodSignature)){
+            localVariables.put(symbol, false);
+        }
+        parametersAndFields = new ArrayList<>();
+        parametersAndFields.addAll(symbolTable.getParameters(methodSignature));
+        parametersAndFields.addAll(symbolTable.getFields());
 
         addVisit("IntLiteral", this::visitIntLiteral);
         addVisit("Id", this::visitId);
@@ -56,7 +63,12 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private Symbol getSymbolByName(String name){
-        for(Symbol s : variables){
+        for(Symbol s : this.localVariables.keySet()){
+            if(name.equals(s.getName())){
+                return s;
+            }
+        }
+        for(Symbol s : this.parametersAndFields){
             if(name.equals(s.getName())){
                 return s;
             }
@@ -64,6 +76,22 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         return null;
     }
 
+    private Symbol getSymbolByName(String name, JmmNode node, List<Report> reports){
+        for(Symbol s : this.localVariables.keySet()){
+            if(name.equals(s.getName())){
+                if(this.localVariables.get(s) == false){ // Not initialized
+                    reports.add(createSemanticError(node, "Variable is not initialized"));
+                }
+                return s;
+            }
+        }
+        for(Symbol s : this.parametersAndFields){
+            if(name.equals(s.getName())){
+                return s;
+            }
+        }
+        return null;
+    }
     private JmmType visitId(JmmNode node, List<Report> reports){
         String name = node.get("name");
         
@@ -71,7 +99,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
             return new JmmType(null, false);
         }
 
-        Symbol symbol = getSymbolByName(name);
+        Symbol symbol = getSymbolByName(name, node, reports);
         if(symbol == null){
             reports.add(createSemanticError(node, "Symbol " + name + " is not defined." ));
             return new JmmType("int", false); // TODO: Returning null crashes program before report is parsed
@@ -200,6 +228,8 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         if(!childType.equals(symbol.getType())){
             reports.add(createSemanticError(node, "Invalid assignment type"));
         }
+
+        this.localVariables.computeIfPresent(symbol, (k, v) -> true);
         return new JmmType(null, false);
     }
 
@@ -223,7 +253,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         if(!assignType.equals(new JmmType(symbol.getType().getName(), false))){
             reports.add(createSemanticError(node, "Invalid type for array assignment"));
         }
-
+        this.localVariables.computeIfPresent(symbol, (k, v) -> true);
         return new JmmType(null, false);
     }
 

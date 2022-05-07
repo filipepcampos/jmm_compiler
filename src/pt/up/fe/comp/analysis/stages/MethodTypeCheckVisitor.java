@@ -111,7 +111,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         JmmNode child = node.getJmmChild(0);
         JmmType childType = visit(child, reports);
         if(!childType.isArray()){
-            reports.add(createSemanticError(node, "Symbol" + child.get("name") + " doesn't support the .length op because it is not an array."));
+            reports.add(createSemanticError(node, "Symbol doesn't support the .length op because it is not an array."));
             //return new JmmType(null, false);  // TODO: Returning null crashes program before report is parsed
         }
         return new JmmType("int", false);

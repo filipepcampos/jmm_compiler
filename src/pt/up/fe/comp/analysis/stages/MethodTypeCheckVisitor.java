@@ -80,7 +80,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         for(Symbol s : this.localVariables.keySet()){
             if(name.equals(s.getName())){
                 if(this.localVariables.get(s) == false){ // Not initialized
-                    reports.add(createSemanticError(node, "Variable is not initialized"));
+                    reports.add(createSemanticError(node, "Variable " + name + " is not initialized"));
                 }
                 return s;
             }
@@ -108,9 +108,10 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitLengthOp(JmmNode node, List<Report> reports){
-        JmmType childType = visit(node.getJmmChild(0), reports);
+        JmmNode child = node.getJmmChild(0);
+        JmmType childType = visit(child, reports);
         if(!childType.isArray()){
-            reports.add(createSemanticError(node, "Symbol is not an array."));
+            reports.add(createSemanticError(node, "Symbol" + child.get("name") + " doesn't support the .length op because it is not an array."));
             //return new JmmType(null, false);  // TODO: Returning null crashes program before report is parsed
         }
         return new JmmType("int", false);
@@ -178,14 +179,14 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
 
                 List<Report> methodCallReports = new ArrayList<>();
                 if(methodParameters.size() != argumentsNode.getNumChildren()){
-                    methodCallReports.add(createSemanticError(node, "Invalid number of arguments"));
+                    methodCallReports.add(createSemanticError(node, "Invalid number of arguments for method " + methodName + " expected " + methodParameters.size() + " arguments but got " + argumentsNode.getNumChildren() + " instead"));
                 }
                 
                 for(int i = 0; i < methodParameters.size(); ++i){
                     Type parameterType = methodParameters.get(i).getType();
                     JmmType argumentType = visit(argumentsNode.getJmmChild(i), reports);
                     if(!argumentType.equals(parameterType)){
-                        methodCallReports.add(createSemanticError(node, "Argument type doesn't match required parameter type"));
+                        methodCallReports.add(createSemanticError(node, "Argument type doesn't match required parameter type for method " + methodName));
                     }
                 }
                 
@@ -214,7 +215,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         }
         JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(new JmmType("boolean", false))){
-            reports.add(createSemanticError(node, "Condition child is not a boolean"));
+            reports.add(createSemanticError(node, "Condition is not a boolean"));
         }
         return new JmmType(null, false);
     }
@@ -226,7 +227,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         JmmType childType = visit(node.getJmmChild(0), reports);
         Symbol symbol = getSymbolByName(node.get("name"));
         if(!childType.equals(symbol.getType())){
-            reports.add(createSemanticError(node, "Invalid assignment type"));
+            reports.add(createSemanticError(node, "Invalid assignment type for symbol " + symbol.getName()));
         }
 
         this.localVariables.computeIfPresent(symbol, (k, v) -> true);
@@ -248,7 +249,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         JmmType assignType = visit(node.getJmmChild(1), reports);
 
         if(!symbolType.isArray()){
-            reports.add(createSemanticError(node, "Symbol is not an array"));
+            reports.add(createSemanticError(node, "Symbol " + symbol.getName() + " is not an array"));
         }
         if(!assignType.equals(new JmmType(symbol.getType().getName(), false))){
             reports.add(createSemanticError(node, "Invalid type for array assignment"));

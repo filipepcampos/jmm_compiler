@@ -13,8 +13,8 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
-import pt.up.fe.comp.SymbolTableCollector;
-import pt.up.fe.comp.MapSymbolTable;
+import pt.up.fe.comp.analysis.table.SymbolTableCollector;
+import pt.up.fe.comp.analysis.table.SymbolTableBuilder;
 import pt.up.fe.comp.JasminGenerator;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 
@@ -75,7 +75,7 @@ public class Launcher {
         System.out.println(analysisResult.getSymbolTable().print());
         TestUtils.noErrors(analysisResult);
 
-        MapSymbolTable symbolTable = new MapSymbolTable();
+        SymbolTableBuilder symbolTable = new SymbolTableBuilder();
         SymbolTableCollector collector = new SymbolTableCollector();
         collector.visit(rootNode, symbolTable);
         System.out.println(symbolTable.print());

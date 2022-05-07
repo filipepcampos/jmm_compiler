@@ -4,6 +4,7 @@ import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import pt.up.fe.specs.util.exceptions.NotImplementedException;
 
 import java.util.HashMap;
+import java.util.List;
 
 import org.specs.comp.ollir.*;
 
@@ -11,9 +12,12 @@ public class JasminGenerator {
 
     private final ClassUnit classUnit;
     private String superClass;
+    private int numberCond;
 
     public JasminGenerator(ClassUnit classUnit) {
         this.classUnit = classUnit;
+        this.superClass = null;
+        this.numberCond = 0;
     }
 
     public JasminResult convert() {
@@ -132,7 +136,7 @@ public class JasminGenerator {
         // method instructions
         method.buildVarTable();
         for (Instruction instruction : method.getInstructions()) {
-            result.append(this.getCode(instruction, method.getVarTable()));
+            result.append(this.getCode(instruction, method.getVarTable(), method.getLabels(instruction)));
         }
 
         // method end directive
@@ -185,10 +189,6 @@ public class JasminGenerator {
         throw new RuntimeException("Could not find import for class " + className);
     }
 
-    public String getArgumentCode(Element element) {
-        return "";
-    }
-
     private String getJasminType(Type type) {
         ElementType elementType = type.getTypeOfElement();
         StringBuilder result = new StringBuilder();
@@ -222,32 +222,141 @@ public class JasminGenerator {
         return result.toString();
     }
 
-    private String getCode(Instruction instruction, HashMap<String, Descriptor> varTable) {
+    private String getCode(Instruction instruction, HashMap<String, Descriptor> varTable, List<String> labels) {
 
         System.out.println(instruction.getInstType());  // DEBUG
 
+        StringBuilder result = new StringBuilder();
+
+        if (labels != null) {
+            for (String label : labels) {
+                result.append(label).append(":\n");
+            }
+        }
+
         switch (instruction.getInstType()) {
             case ASSIGN:
-                return this.getCode((AssignInstruction) instruction, varTable);
+                result.append(this.getCode((AssignInstruction) instruction, varTable));
+                break;
             case CALL:
-                return this.getCode((CallInstruction) instruction);
+                result.append(this.getCode((CallInstruction) instruction, varTable));
+                break;
             case GOTO:
-                return "";
+                result.append(getCode((GotoInstruction) instruction, varTable));
+                break;
             case BRANCH:
-                return "";
+                result.append(getCode((CondBranchInstruction) instruction, varTable));
+                break;
             case RETURN:
-                return this.getCode((ReturnInstruction) instruction, varTable);
+                result.append(getCode((ReturnInstruction) instruction, varTable));
+                break;
             case GETFIELD:
                 throw new NotImplementedException(instruction.getInstType());
             case UNARYOPER:
                 throw new NotImplementedException(instruction.getInstType());
             case BINARYOPER:
-                throw new NotImplementedException(instruction.getInstType());
+                result.append(getCode((BinaryOpInstruction) instruction, varTable));
+                break;
             case NOPER:
-                return this.loadElement(((SingleOpInstruction) instruction).getSingleOperand(), varTable);
+                result.append(loadElement(((SingleOpInstruction) instruction).getSingleOperand(), varTable));
+                break;
             default:
                 throw new RuntimeException("Unrecognized instruction");
         }
+
+        return result.toString();
+    }
+
+    private String getCode(GotoInstruction instruction, HashMap<String, Descriptor> varTable) {
+        return "\tgoto " + instruction.getLabel() + "\n";
+    }
+
+    private String getCode(BinaryOpInstruction instruction, HashMap<String, Descriptor> varTable) {
+        switch (instruction.getOperation().getOpType()) {
+            case ADD:
+            case SUB:
+            case MUL:
+            case DIV:
+                return this.getIntOpCode(instruction, varTable);
+            case LTH:
+            case ANDB:
+            case NOTB:
+                return this.getBoolOpCode(instruction, varTable);
+            default:
+                return "Error in BinaryOpInstruction\n";
+        }
+    }
+
+    private String getIntOpCode(BinaryOpInstruction instruction, HashMap<String, Descriptor> varTable) {
+        StringBuilder result = new StringBuilder();
+
+        result.append(this.loadElement(instruction.getLeftOperand(), varTable));
+        result.append(this.loadElement(instruction.getRightOperand(), varTable));
+
+        switch (instruction.getOperation().getOpType()) {
+            case ADD:
+                result.append("\tiadd\n");
+                break;
+            case SUB:
+                result.append("\tisub\n");
+                break;
+            case MUL:
+                result.append("\timul\n");
+                break;
+            case DIV:
+                result.append("\tidiv\n");
+                break;
+            default:
+                return "Error in BinaryOpInstruction (int)\n"; // TODO: CAREFUL WITH DEFAULT
+        }
+
+        return result.toString();
+    }
+
+    private String getBoolOpCode(BinaryOpInstruction instruction, HashMap<String, Descriptor> varTable) {
+        StringBuilder result = new StringBuilder();
+
+        result.append(this.loadElement(instruction.getLeftOperand(), varTable));
+        result.append(this.loadElement(instruction.getRightOperand(), varTable));
+
+        switch (instruction.getOperation().getOpType()) {
+            case LTH:
+                result.append("\tif_icmplt ").append(this.getCondTrueLabel()).append("\n");
+                result.append("\ticonst_1\n");
+                result.append("\tgoto ").append(this.getCondFalseLabel()).append("\n");
+                result.append(this.getCondTrueLabel()).append(":\n");
+                result.append("\ticonst_0\n");
+                result.append(this.getCondFalseLabel()).append(":\n");
+                this.numberCond++;
+                break;
+            case ANDB:
+                result.append("\tiand\n");
+                break;
+            case NOTB:
+                result.append("\tineg\n");
+                break;
+            default:
+                return "Error in BinaryOpInstruction (bool)\n";
+        }
+
+        return result.toString();
+    }
+
+    private String getCondTrueLabel() {
+        return "true" + this.numberCond;
+    }
+
+    private String getCondFalseLabel() {
+        return "false" + this.numberCond;
+    }
+
+    private String getCode(CondBranchInstruction instruction, HashMap<String, Descriptor> varTable) {
+        StringBuilder result = new StringBuilder();
+
+        result.append(this.getCode(instruction.getCondition(), varTable, null));
+        result.append("\tifeq ").append(instruction.getLabel()).append("\n");
+
+        return result.toString();
     }
 
     private String getCode(AssignInstruction instruction, HashMap<String, Descriptor> varTable) {
@@ -259,7 +368,7 @@ public class JasminGenerator {
         } */
 
         // deal with value of right hand side of instruction first
-        result.append(this.getCode(instruction.getRhs(), varTable));
+        result.append(this.getCode(instruction.getRhs(), varTable, null));
         
         // store the value (if needed)
         result.append(this.storeElement(operand, varTable));
@@ -310,25 +419,22 @@ public class JasminGenerator {
         return "";
     }
 
-    private String getCode(CallInstruction method) {
+    private String getCode(CallInstruction method, HashMap<String, Descriptor> varTable) {
         switch (method.getInvocationType()) {
             case invokevirtual:
-                throw new NotImplementedException(method.getInvocationType());
             case invokeinterface:
-                throw new NotImplementedException(method.getInvocationType());
-            case invokespecial:
-                return this.getCodeInvokeSpecial(method);
             case invokestatic:
-                return this.getCodeInvokeStatic(method);
+            case invokespecial:
+                return this.getInvokeCode(method, varTable);
             case NEW:
-                throw new NotImplementedException(method.getInvocationType());
-            case arraylength:
-                throw new NotImplementedException(method.getInvocationType());
-            case ldc:
-                throw new NotImplementedException(method.getInvocationType());
+                return this.getNewCode(method);
             default:
                 throw new RuntimeException("Unrecognized call instruction");
         }
+    }
+
+    private String getNewCode(CallInstruction method) {
+        return "\tnew " + ((Operand) method.getFirstArg()).getName() + "\n\tdup\n"; // TODO: VERIFY DUP
     }
 
     private String getCode(ReturnInstruction instruction, HashMap<String, Descriptor> varTable) {
@@ -350,31 +456,37 @@ public class JasminGenerator {
         }
     }
 
-    private String getCodeInvokeStatic(CallInstruction method) {
+    private String getInvokeCode(CallInstruction method, HashMap<String, Descriptor> varTable) {
         /*
         invokestatic io/println(Ljava/lang/String;)V
         */
 
         StringBuilder result = new StringBuilder();
 
-        String methodClass = ((Operand) method.getFirstArg()).getName();
+        for (Element param : method.getListOfOperands()) {
+            result.append(this.loadElement(param, varTable));
+        }
+
+        result.append("\t").append(method.getInvocationType()).append(" ");
+
+        String methodClass = ((ClassType) method.getFirstArg().getType()).getName();
+        if (!methodClass.equals(this.classUnit.getClassName())) {
+            methodClass = this.getFullyQualifiedName(methodClass);
+        }
+
         String methodName = ((LiteralElement) method.getSecondArg()).getLiteral();
         methodName = methodName.substring(1, methodName.length() - 1);
 
-        result.append("\tinvokestatic ").append(this.getFullyQualifiedName(methodClass)).append("/").append(methodName);
+        result.append(methodClass).append("/").append(methodName);
 
         result.append("(");
         for (Element param : method.getListOfOperands()) {
-            result.append(this.getArgumentCode(param));
+            result.append(this.getJasminType(param.getType()));
         }
         result.append(")");
 
         result.append(this.getJasminType(method.getReturnType())).append("\n");
 
         return result.toString();
-    }
-
-    private String getCodeInvokeSpecial(CallInstruction method) {
-        return "";
     }
 }

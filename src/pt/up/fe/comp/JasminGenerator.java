@@ -2,6 +2,9 @@ package pt.up.fe.comp;
 
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import pt.up.fe.specs.util.exceptions.NotImplementedException;
+
+import java.util.HashMap;
+
 import org.specs.comp.ollir.*;
 
 public class JasminGenerator {
@@ -70,19 +73,27 @@ public class JasminGenerator {
     }
 
     private String convertFields() {
+        StringBuilder result = new StringBuilder();
+
+        for (Field field : this.classUnit.getFields()) {
+            result.append(this.convertField(field));
+        }
+        
+        return result.toString();
+    }
+
+    private String convertField(Field field) {
         /*
         .field <access-spec> <field-name> <descriptor> [ = <value> ]
         */
 
         StringBuilder result = new StringBuilder();
 
-        for (Field field : this.classUnit.getFields()) {
-            result.append(".field ");
-            result.append(field.getFieldAccessModifier().name().toLowerCase()).append(" ");
-            result.append(field.getFieldName()).append(" ");
-            result.append(this.getJasminType(field.getFieldType())).append("\n");
-        }
-        
+        result.append(".field ");
+        result.append(field.getFieldAccessModifier().name().toLowerCase()).append(" ");
+        result.append(field.getFieldName()).append(" ");
+        result.append(this.getJasminType(field.getFieldType())).append("\n");
+
         return result.toString();
     }
 
@@ -119,8 +130,9 @@ public class JasminGenerator {
         result.append(this.convertMethodLimits(method));
 
         // method instructions
+        method.buildVarTable();
         for (Instruction instruction : method.getInstructions()) {
-            result.append(this.getCode(instruction));
+            result.append(this.getCode(instruction, method.getVarTable()));
         }
 
         // method end directive
@@ -210,18 +222,21 @@ public class JasminGenerator {
         return result.toString();
     }
 
-    private String getCode(Instruction instruction) {
+    private String getCode(Instruction instruction, HashMap<String, Descriptor> varTable) {
+
+        System.out.println(instruction.getInstType());  // DEBUG
+
         switch (instruction.getInstType()) {
             case ASSIGN:
-                return ""; // getCode((AssignInstruction) instruction);
+                return this.getCode((AssignInstruction) instruction, varTable);
             case CALL:
-                return getCode((CallInstruction) instruction);
+                return this.getCode((CallInstruction) instruction);
             case GOTO:
                 return "";
             case BRANCH:
                 return "";
             case RETURN:
-                return getCode((ReturnInstruction) instruction);
+                return this.getCode((ReturnInstruction) instruction, varTable);
             case GETFIELD:
                 throw new NotImplementedException(instruction.getInstType());
             case UNARYOPER:
@@ -229,10 +244,70 @@ public class JasminGenerator {
             case BINARYOPER:
                 throw new NotImplementedException(instruction.getInstType());
             case NOPER:
-                throw new NotImplementedException(instruction.getInstType());
+                return this.loadElement(((SingleOpInstruction) instruction).getSingleOperand(), varTable);
             default:
                 throw new RuntimeException("Unrecognized instruction");
         }
+    }
+
+    private String getCode(AssignInstruction instruction, HashMap<String, Descriptor> varTable) {
+        StringBuilder result = new StringBuilder();
+        Operand operand = (Operand) instruction.getDest();
+
+        /* if (operand instanceof ArrayOperand) {
+            ArrayOperand aoperand = (ArrayOperand) operand;
+        } */
+
+        // deal with value of right hand side of instruction first
+        result.append(this.getCode(instruction.getRhs(), varTable));
+        
+        // store the value (if needed)
+        result.append(this.storeElement(operand, varTable));
+
+        return result.toString();
+    }
+
+    private String storeElement(Operand operand, HashMap<String, Descriptor> varTable) {
+        if (operand instanceof ArrayOperand) {
+            return "\tiastore\n";
+        }
+
+        switch (operand.getType().getTypeOfElement()) {
+            case INT32:
+            case BOOLEAN:
+                return "\tistore " + varTable.get(operand.getName()).getVirtualReg() + "\n";
+            case OBJECTREF:
+            case ARRAYREF:
+                return "\tastore " + varTable.get(operand.getName()).getVirtualReg() + "\n";
+            default:
+                return "";
+        }
+    }
+
+    private String loadElement(Element element, HashMap<String, Descriptor> varTable) {
+        if (element instanceof LiteralElement) {
+            return "\tldc " + ((LiteralElement) element).getLiteral() + "\n";
+        }
+
+        if (element instanceof Operand) {
+            Operand operand = (Operand) element;
+            switch (operand.getType().getTypeOfElement()) {
+                case THIS:
+                    return "\taload_0\n";
+                case INT32:
+                case BOOLEAN:
+                    return "\tiload "  + varTable.get(operand.getName()).getVirtualReg() + "\n";
+                case OBJECTREF:
+                case ARRAYREF:
+                    return "\taload "  + varTable.get(operand.getName()).getVirtualReg() + "\n";
+                case CLASS:
+                    return "";
+                default:
+                    return "";
+            }
+        }
+
+        return "";
     }
 
     private String getCode(CallInstruction method) {
@@ -256,30 +331,23 @@ public class JasminGenerator {
         }
     }
 
-    private String getCode(ReturnInstruction instruction) {
+    private String getCode(ReturnInstruction instruction, HashMap<String, Descriptor> varTable) {
         if (!instruction.hasReturnValue()) {
             return "\treturn\n";
         }
 
-        StringBuilder result = new StringBuilder();
-
         switch (instruction.getOperand().getType().getTypeOfElement()) {
             case VOID:
-                result.append("\treturn\n");
-                break;
+                return "\treturn\n";
             case INT32:
             case BOOLEAN:
-                result.append("\tireturn\n");
-                break;
+                return this.loadElement(instruction.getOperand(), varTable) + "\tireturn\n";
             case ARRAYREF:
             case OBJECTREF:
-                result.append("\tareturn\n");
-                break;
+                return this.loadElement(instruction.getOperand(), varTable) + "\tareturn\n";
             default:
-                break;
+                return "";
         }
-
-        return result.toString();
     }
 
     private String getCodeInvokeStatic(CallInstruction method) {

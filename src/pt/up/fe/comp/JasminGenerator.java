@@ -7,6 +7,7 @@ import org.specs.comp.ollir.*;
 public class JasminGenerator {
 
     private final ClassUnit classUnit;
+    private String superClass;
 
     public JasminGenerator(ClassUnit classUnit) {
         this.classUnit = classUnit;
@@ -15,7 +16,7 @@ public class JasminGenerator {
     public JasminResult convert() {
         StringBuilder result = new StringBuilder();
         result.append(this.convertClass());
-        //result.append(this.convertMethods());
+        result.append(this.convertMethods());
 
         System.out.println(result);     // DEBUG
         
@@ -37,24 +38,35 @@ public class JasminGenerator {
         StringBuilder result = new StringBuilder();
 
         // .class directive
-        result.append(".class public ").append(this.classUnit.getClassName()).append("\n");
+        result.append(this.convertClassDirective());
 
         // .super directive
-        String superClass = classUnit.getSuperClass();
-        if (superClass != null) {
-            superClass = this.getFullyQualifiedName(superClass);
-        } else {
-            superClass = "java/lang/Object";
-        }
-        result.append(".super ").append(superClass).append("\n");
+        result.append(this.convertSuperDirective());
 
         // class fields
         result.append(this.convertFields());
 
-        // initializer declaration
-        result.append(".method public <init>()V\n\taload_0\n\tinvokenonvirtual ").append(superClass).append("/<init>()V\n\treturn\n.end method\n");
-
         return result.toString();
+    }
+
+    private String convertClassDirective() {
+        return ".class public " + this.classUnit.getClassName() + "\n";
+    }
+
+    private String convertSuperDirective() {
+        return ".super " + this.getSuperClassName() + "\n";
+    }
+
+    private String getSuperClassName() {
+        if (this.superClass == null) {
+            this.superClass = classUnit.getSuperClass();
+            if (this.superClass != null) {
+                this.superClass = this.getFullyQualifiedName(superClass);
+            } else {
+                this.superClass = "java/lang/Object";
+            }
+        }
+        return this.superClass;
     }
 
     private String convertFields() {
@@ -87,32 +99,69 @@ public class JasminGenerator {
         StringBuilder result = new StringBuilder();
 
         for (Method method : this.classUnit.getMethods()) {
-            result.append(".method public ");
-
-            if (method.isStaticMethod()) {
-                result.append("static ");
-            }
-
-            result.append(method.getMethodName());
-
-            result.append("(");
-            for (Element param : method.getParams()) {
-                result.append(this.getJasminType(param.getType()));
-            }
-            result.append(")");
-
-            result.append(this.getJasminType(method.getReturnType())).append("\n");
-            
-            result.append("\t.limit stack 99\n\t.limit locals 99\n");
-
-            for (Instruction instruction : method.getInstructions()) {
-                result.append(this.getCode(instruction));
-            }
-
-            result.append("\treturn\n.end method\n");
+            result.append(this.convertMethod(method));
         }
 
         return result.toString();
+    }
+
+    private String convertMethod(Method method) {
+        if (method.isConstructMethod()) {
+            return ".method public <init>()V\n\taload_0\n\tinvokenonvirtual " + this.getSuperClassName() + "/<init>()V\n\treturn\n.end method\n";
+        }
+
+        StringBuilder result = new StringBuilder();
+
+        // method header
+        result.append(this.convertMethodHeader(method));
+
+        // method limits
+        result.append(this.convertMethodLimits(method));
+
+        // method instructions
+        for (Instruction instruction : method.getInstructions()) {
+            result.append(this.getCode(instruction));
+        }
+
+        // method end directive
+        result.append(".end method\n");
+
+        return result.toString();
+    }
+
+    private String convertMethodHeader(Method method) {
+        /*
+        .method public static main([Ljava/lang/String;)V
+        */
+
+        StringBuilder result = new StringBuilder();
+
+        result.append(".method public ");
+
+        if (method.isStaticMethod()) {
+            result.append("static ");
+        }
+
+        result.append(method.getMethodName());
+
+        result.append("(");
+        for (Element param : method.getParams()) {
+            result.append(this.getJasminType(param.getType()));
+        }
+        result.append(")");
+
+        result.append(this.getJasminType(method.getReturnType())).append("\n");
+
+        return result.toString();
+    }
+
+    private String convertMethodLimits(Method method) {
+        /*
+        .limit stack 99
+        .limit locals 99
+        */
+
+        return "\t.limit stack 99\n\t.limit locals 99\n";
     }
 
     public String getFullyQualifiedName(String className) {
@@ -164,15 +213,15 @@ public class JasminGenerator {
     private String getCode(Instruction instruction) {
         switch (instruction.getInstType()) {
             case ASSIGN:
-                return getCode((AssignInstruction) instruction);
+                return ""; // getCode((AssignInstruction) instruction);
             case CALL:
                 return getCode((CallInstruction) instruction);
             case GOTO:
-                throw new NotImplementedException(instruction.getInstType());
+                return "";
             case BRANCH:
-                throw new NotImplementedException(instruction.getInstType());
+                return "";
             case RETURN:
-                throw new NotImplementedException(instruction.getInstType());
+                return getCode((ReturnInstruction) instruction);
             case GETFIELD:
                 throw new NotImplementedException(instruction.getInstType());
             case UNARYOPER:
@@ -207,6 +256,32 @@ public class JasminGenerator {
         }
     }
 
+    private String getCode(ReturnInstruction instruction) {
+        if (!instruction.hasReturnValue()) {
+            return "\treturn\n";
+        }
+
+        StringBuilder result = new StringBuilder();
+
+        switch (instruction.getOperand().getType().getTypeOfElement()) {
+            case VOID:
+                result.append("\treturn\n");
+                break;
+            case INT32:
+            case BOOLEAN:
+                result.append("\tireturn\n");
+                break;
+            case ARRAYREF:
+            case OBJECTREF:
+                result.append("\tareturn\n");
+                break;
+            default:
+                break;
+        }
+
+        return result.toString();
+    }
+
     private String getCodeInvokeStatic(CallInstruction method) {
         /*
         invokestatic io/println(Ljava/lang/String;)V
@@ -232,6 +307,6 @@ public class JasminGenerator {
     }
 
     private String getCodeInvokeSpecial(CallInstruction method) {
-        throw new NotImplementedException();
+        return "";
     }
 }

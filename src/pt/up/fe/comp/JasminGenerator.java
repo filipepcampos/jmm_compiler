@@ -273,7 +273,7 @@ public class JasminGenerator {
                 result.append(this.getCode((ReturnInstruction) instruction, varTable));
                 break;
             case GETFIELD:
-                throw new NotImplementedException(instruction.getInstType());
+                result.append(this.getCode((GetFieldInstruction) instruction, varTable));
             case UNARYOPER:
                 throw new NotImplementedException(instruction.getInstType());
             case BINARYOPER:
@@ -350,6 +350,19 @@ public class JasminGenerator {
             default:
                 throw new RuntimeException("Unrecognized return instruction for " + instruction.getOperand().getType());
         }
+    }
+
+    private String getCode(GetFieldInstruction instruction, HashMap<String, Descriptor> varTable) {
+
+        StringBuilder result = new StringBuilder();
+
+        result.append(this.loadElement(instruction.getFirstOperand(), varTable));
+        result.append("getfield ");
+        result.append(this.getElementClass(instruction.getFirstOperand())).append("/");
+        result.append(((Operand) instruction.getSecondOperand()).getName()).append(" ");
+        result.append(this.getJasminType(((Operand) instruction.getSecondOperand()).getType()));
+
+        return result.toString();
     }
 
     private String getCode(BinaryOpInstruction instruction, HashMap<String, Descriptor> varTable) {

@@ -80,8 +80,10 @@ public class Launcher {
 
         // AST to OLLIR
         JmmOptimizer optimizer = new JmmOptimizer();
-        var optimizationResult = optimizer.optimize(analysisResult);
-        TestUtils.noErrors(optimizationResult);
+        var ollirResult = optimizer.toOllir(analysisResult);
+        //var optimizationResult = optimizer.optimize(analysisResult);
+    
+        TestUtils.noErrors(ollirResult);
 
         SymbolTableBuilder symbolTable = new SymbolTableBuilder();
         SymbolTableCollector collector = new SymbolTableCollector();
@@ -89,8 +91,8 @@ public class Launcher {
         System.out.println(symbolTable.print());
  
         String content = SpecsIo.read("./test/fixtures/public/ollir/myclass3.ollir");
-        System.out.println(content);
-        OllirResult ollirResult = new OllirResult(content, new HashMap<String, String>());
+        //System.out.println(content);
+        //OllirResult ollirResult = new OllirResult(content, new HashMap<String, String>());
 
         JasminGenerator generator = new JasminGenerator();
         generator.toJasmin(ollirResult);

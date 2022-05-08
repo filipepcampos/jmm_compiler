@@ -23,6 +23,8 @@ public class OllirUtils {
     public static String getOllirType(String jmmType) {
         switch(jmmType) {
             case "void": return "V";
+            case "int": return "i32";
+            case "boolean": return "bool";
         }
         return jmmType;
     }

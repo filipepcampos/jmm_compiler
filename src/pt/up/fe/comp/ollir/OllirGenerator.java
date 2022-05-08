@@ -47,6 +47,13 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
 
         code.append(" {\n");
 
+        for(Symbol s : symbolTable.getFields()){
+            code.append(".field private ").append(OllirUtils.getCode(s)).append(";\n");
+        }
+
+        code.append(".construct ").append(symbolTable.getClassName())
+            .append("().V{\n  invokespecial(this, \"<init>\").V ;\n}\n");
+        
         for(var child : node.getChildren()){
             visit(child);
         }
@@ -58,7 +65,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
 
     private Integer visitMainMethodDecl(JmmNode node, Boolean dummy){
         code.append(".method public static main(args.array.String).V {\n");
-        generateMethodStatements(node);
+        generateMethodStatements(node, "main");
         code.append("}\n");
         return 0;
     }
@@ -77,12 +84,12 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
         code.append(OllirUtils.getCode(symbolTable.getReturnType(methodSignature)));
 
         code.append("{\n");
-        generateMethodStatements(node);
+        generateMethodStatements(node, methodSignature);
         code.append("\n}");
         return 0;
     }
 
-    private void generateMethodStatements(JmmNode node) {
+    private void generateMethodStatements(JmmNode node, String methodSignature) {
         int lastParamIndex = -1;
         for(int i = 0; i < node.getNumChildren(); ++i){
             if(node.getJmmChild(i).getKind().equals("Parameter")) {
@@ -93,8 +100,11 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
         var stmts = node.getChildren().subList(lastParamIndex+1, node.getNumChildren());
 
         System.out.println("STMTS: " + stmts);
+        OllirStatementGenerator stmtGenerator = new OllirStatementGenerator(symbolTable, methodSignature);
         for(var stmt : stmts){
-            visit(stmt);
+            System.out.println("Visiting stmt " + stmt.getKind() + ":");
+            OllirStatement ollirStatement = stmtGenerator.visit(stmt);
+            code.append(ollirStatement.getCodeBefore());
         }
     }
 

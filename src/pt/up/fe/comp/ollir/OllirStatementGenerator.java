@@ -225,6 +225,7 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
 
         // Return
         String returnTypeString = expectedType;
+        System.out.println(methodName + "--> " + expectedType);
         if(idName.equals("this")) {
             Type returnType = symbolTable.getReturnType(methodName);
             returnTypeString = OllirUtils.getCode(returnType);
@@ -278,7 +279,7 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
         if(node.getNumChildren() != 1){
             // TODO: Throw error
         }
-        OllirStatement stmt = visit(node.getJmmChild(0), expectedType);
+        OllirStatement stmt = visit(node.getJmmChild(0), "V");
         return new OllirStatement(stmt.getCodeBefore(), "");
     }
 

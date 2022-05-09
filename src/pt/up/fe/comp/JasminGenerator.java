@@ -135,8 +135,15 @@ public class JasminGenerator {
 
         // method instructions
         method.buildVarTable();
+        Instruction lastInstruction = null;
         for (Instruction instruction : method.getInstructions()) {
             result.append(this.getCode(instruction, method.getVarTable(), method.getLabels(instruction)));
+            lastInstruction = instruction;
+        }
+
+        // append return if method return type is void
+        if (lastInstruction != null && lastInstruction.getInstType() != InstructionType.RETURN && method.getReturnType().getTypeOfElement() == ElementType.VOID) {
+            result.append("\treturn\n");
         }
 
         // method end directive
@@ -447,8 +454,9 @@ public class JasminGenerator {
                     return "\tiload "  + varTable.get(operand.getName()).getVirtualReg() + "\n";
                 case OBJECTREF:
                 case ARRAYREF:
-                case CLASS:
                     return "\taload "  + varTable.get(operand.getName()).getVirtualReg() + "\n";
+                case CLASS:
+                    return "";
                 default:
                     throw new RuntimeException("Unrecognized operand type " + operand.getType());
             }
@@ -462,7 +470,7 @@ public class JasminGenerator {
         invokestatic io/println(Ljava/lang/String;)V
         */
 
-        method.show();  // DEBUG
+        //method.show();  // DEBUG
 
         StringBuilder result = new StringBuilder();
 

@@ -1,3 +1,5 @@
+import java.io;
+
 Fac {
 	.construct Fac().V {
 		invokespecial(this, "<init>").V;

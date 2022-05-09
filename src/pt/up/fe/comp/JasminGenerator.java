@@ -281,6 +281,10 @@ public class JasminGenerator {
                 break;
             case GETFIELD:
                 result.append(this.getCode((GetFieldInstruction) instruction, varTable));
+                break;
+            case PUTFIELD:
+                result.append(this.getCode((PutFieldInstruction) instruction, varTable));
+                break;
             case UNARYOPER:
                 throw new NotImplementedException(instruction.getInstType());
             case BINARYOPER:
@@ -321,7 +325,10 @@ public class JasminGenerator {
             case invokespecial:
                 return this.getInvokeCode(method, varTable);
             case NEW:
-                return "\tnew " + ((Operand) method.getFirstArg()).getName() + "\n";
+                ElementType type = method.getFirstArg().getType().getTypeOfElement();
+                if (type == ElementType.ARRAYREF) {
+                    return this.loadElement(method.getListOfOperands().get(0), varTable) + "\tnewarray int\n";
+                } else return "\tnew " + ((Operand) method.getFirstArg()).getName() + "\n";
             case arraylength:
                 return this.loadElement(method.getFirstArg(), varTable) + "\tarraylength\n";
             default:

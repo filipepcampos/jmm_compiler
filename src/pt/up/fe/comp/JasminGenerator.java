@@ -283,7 +283,7 @@ public class JasminGenerator {
                 result.append(this.getCode((GetFieldInstruction) instruction, varTable));
                 break;
             case PUTFIELD:
-                result.append(this.getCode((PutFieldInstruction) instruction, varTable));
+                result.append(this.getCode((PutFieldInstruction) instruction, varTable));   // TODO
                 break;
             case UNARYOPER:
                 throw new NotImplementedException(instruction.getInstType());

@@ -168,10 +168,8 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
 
         JmmNode classIdNode = node.getJmmChild(0);
         String className = classIdNode.get("name");
-        // TODO Verify if className == 'this' or if it exists in symbolTable
 
         JmmNode argumentsNode = node.getJmmChild(1);
-        // TODO: Visit arguments
 
         if(className.equals("this")){
             if(symbolTable.getMethods().contains(methodName)){

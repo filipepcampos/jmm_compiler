@@ -97,13 +97,17 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
             }
         }
 
+        String ollirReturnType = OllirUtils.getCode(symbolTable.getReturnType(methodSignature));
+        System.out.println("debug: " + methodSignature);
+        System.out.println("debug, method has return type: " + ollirReturnType);
+        System.out.println(symbolTable.getParameters("main"));
         var stmts = node.getChildren().subList(lastParamIndex+1, node.getNumChildren());
 
         System.out.println("STMTS: " + stmts);
         OllirStatementGenerator stmtGenerator = new OllirStatementGenerator(symbolTable, methodSignature);
         for(var stmt : stmts){
             System.out.println("Visiting stmt " + stmt.getKind() + ":");
-            OllirStatement ollirStatement = stmtGenerator.visit(stmt);
+            OllirStatement ollirStatement = stmtGenerator.visit(stmt, ollirReturnType);
             code.append(ollirStatement.getCodeBefore());
         }
     }

@@ -287,7 +287,7 @@ public class JasminGenerator {
                 result.append(this.getCode((BinaryOpInstruction) instruction, varTable));
                 break;
             case NOPER:
-                result.append(this.loadElement(((SingleOpInstruction) instruction).getSingleOperand(), varTable));
+                result.append(this.getCode((SingleOpInstruction) instruction, varTable));
                 break;
             default:
                 throw new RuntimeException("Unrecognized instruction " + instruction.getInstType());
@@ -307,7 +307,7 @@ public class JasminGenerator {
         // deal with value of right hand side of instruction first
         result.append(this.getCode(instruction.getRhs(), varTable, null));
         
-        // store the value (if needed)
+        // store the value
         result.append(this.storeElement(operand, varTable));
 
         return result.toString();
@@ -322,6 +322,8 @@ public class JasminGenerator {
                 return this.getInvokeCode(method, varTable);
             case NEW:
                 return "\tnew " + ((Operand) method.getFirstArg()).getName() + "\n";
+            case arraylength:
+                return this.loadElement(method.getFirstArg(), varTable) + "\tarraylength\n";
             default:
                 throw new RuntimeException("Unrecognized call instruction " + method.getInvocationType());
         }
@@ -414,6 +416,10 @@ public class JasminGenerator {
         return result.toString();
     }
 
+    private String getCode(SingleOpInstruction instruction, HashMap<String, Descriptor> varTable) {
+        return this.loadElement(instruction.getSingleOperand(), varTable);
+    }
+
     private String getCondTrueLabel() {
         return "true" + this.numberCond;
     }
@@ -442,9 +448,16 @@ public class JasminGenerator {
     private String loadElement(Element element, HashMap<String, Descriptor> varTable) {
         if (element instanceof LiteralElement) {
             return "\tldc " + ((LiteralElement) element).getLiteral() + "\n";
-        }
+        } else if (element instanceof ArrayOperand) {
+            ArrayOperand arrayOperand = (ArrayOperand) element;
+            StringBuilder result = new StringBuilder();
 
-        if (element instanceof Operand) {
+            result.append("\taload ").append(varTable.get(arrayOperand.getName()).getVirtualReg()).append("\n");
+            result.append(this.loadElement(arrayOperand.getIndexOperands().get(0), varTable)); // TODO: Support for multiple dimensional arrays
+            result.append("\tiaload\n");
+
+            return result.toString();
+        } else if (element instanceof Operand) {
             Operand operand = (Operand) element;
             switch (operand.getType().getTypeOfElement()) {
                 case THIS:

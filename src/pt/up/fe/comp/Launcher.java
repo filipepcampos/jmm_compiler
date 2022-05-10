@@ -13,8 +13,6 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
-import pt.up.fe.comp.SymbolTableCollector;
-import pt.up.fe.comp.MapSymbolTable;
 import pt.up.fe.comp.OllirToJasmin;
 import pt.up.fe.comp.jmm.ollir.*;
 import pt.up.fe.comp.jmm.jasmin.*;
@@ -25,6 +23,8 @@ import java.nio.file.Paths;
 public class Launcher {
 
     public static void main(String[] args) {
+
+        /*
         SpecsSystem.programStandardInit();
 
         SpecsLogs.info("Executing with args: " + Arrays.toString(args));

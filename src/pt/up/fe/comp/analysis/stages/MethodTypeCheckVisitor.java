@@ -177,15 +177,16 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
                 List<Symbol> methodParameters = symbolTable.getParameters(methodName);
 
                 List<Report> methodCallReports = new ArrayList<>();
+                System.out.println("VISIT --- " + methodName + " -> " + methodParameters.size() + " vs " + argumentsNode.getNumChildren());
                 if(methodParameters.size() != argumentsNode.getNumChildren()){
                     methodCallReports.add(createSemanticError(node, "Invalid number of arguments for method " + methodName + " expected " + methodParameters.size() + " arguments but got " + argumentsNode.getNumChildren() + " instead"));
-                }
-                
-                for(int i = 0; i < methodParameters.size(); ++i){
-                    Type parameterType = methodParameters.get(i).getType();
-                    JmmType argumentType = visit(argumentsNode.getJmmChild(i), reports);
-                    if(!argumentType.equals(parameterType)){
-                        methodCallReports.add(createSemanticError(node, "Argument type doesn't match required parameter type for method " + methodName));
+                } else {
+                    for(int i = 0; i < methodParameters.size(); ++i){
+                        Type parameterType = methodParameters.get(i).getType();
+                        JmmType argumentType = visit(argumentsNode.getJmmChild(i), reports);
+                        if(!argumentType.equals(parameterType)){
+                            methodCallReports.add(createSemanticError(node, "Argument type doesn't match required parameter type for method " + methodName));
+                        }
                     }
                 }
                 

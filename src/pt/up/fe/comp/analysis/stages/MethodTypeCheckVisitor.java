@@ -168,10 +168,8 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
 
         JmmNode classIdNode = node.getJmmChild(0);
         String className = classIdNode.get("name");
-        // TODO Verify if className == 'this' or if it exists in symbolTable
 
         JmmNode argumentsNode = node.getJmmChild(1);
-        // TODO: Visit arguments
 
         if(className.equals("this")){
             if(symbolTable.getMethods().contains(methodName)){
@@ -203,8 +201,6 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         } else {
             return new JmmType(null, false, true);
         }
-        // TODO: Method doesnt exist
-
     
         return new JmmType("int", false); // TODO: Returning null crashes program before report is parsed
     }
@@ -278,7 +274,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         if(!(visit(node.getJmmChild(1), reports).equals(new JmmType("int", false)))){
             reports.add(createSemanticError(node, "Invalid array index"));
         }
-        return new JmmType(type.getName(), false); // TODO: Are arrays inside arrays allowed?
+        return new JmmType(type.getName(), false);
     }
 
     private JmmType visitArrayInitialization(JmmNode node, List<Report> reports){

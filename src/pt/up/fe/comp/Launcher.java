@@ -16,7 +16,9 @@ import pt.up.fe.specs.util.SpecsSystem;
 import pt.up.fe.comp.analysis.table.SymbolTableCollector;
 import pt.up.fe.comp.analysis.table.SymbolTableBuilder;
 import pt.up.fe.comp.JasminGenerator;
+import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
+import pt.up.fe.comp.ollir.JmmOptimizer;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -70,10 +72,18 @@ public class Launcher {
             return;
         }
         
+        // Analysis Stage
         JmmAnalyser analyser = new JmmAnalyser();
         JmmSemanticsResult analysisResult = analyser.semanticAnalysis(parserResult);
         System.out.println(analysisResult.getSymbolTable().print());
         TestUtils.noErrors(analysisResult);
+
+        // AST to OLLIR
+        JmmOptimizer optimizer = new JmmOptimizer();
+        var ollirResult = optimizer.toOllir(analysisResult);
+        //var optimizationResult = optimizer.optimize(analysisResult);
+    
+        TestUtils.noErrors(ollirResult);
 
         SymbolTableBuilder symbolTable = new SymbolTableBuilder();
         SymbolTableCollector collector = new SymbolTableCollector();
@@ -81,8 +91,8 @@ public class Launcher {
         System.out.println(symbolTable.print());
  
         String content = SpecsIo.read("./test/fixtures/public/ollir/myclass3.ollir");
-        System.out.println(content);
-        OllirResult ollirResult = new OllirResult(content, new HashMap<String, String>());
+        //System.out.println(content);
+        //OllirResult ollirResult = new OllirResult(content, new HashMap<String, String>());
 
         JasminGenerator generator = new JasminGenerator();
         generator.toJasmin(ollirResult);

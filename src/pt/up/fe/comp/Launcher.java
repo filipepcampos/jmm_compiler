@@ -13,12 +13,11 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
-import pt.up.fe.comp.analysis.table.SymbolTableCollector;
-import pt.up.fe.comp.analysis.table.SymbolTableBuilder;
-import pt.up.fe.comp.JasminGenerator;
-import pt.up.fe.comp.jmm.ollir.JmmOptimization;
-import pt.up.fe.comp.jmm.ollir.OllirResult;
-import pt.up.fe.comp.ollir.JmmOptimizer;
+import pt.up.fe.comp.SymbolTableCollector;
+import pt.up.fe.comp.MapSymbolTable;
+import pt.up.fe.comp.OllirToJasmin;
+import pt.up.fe.comp.jmm.ollir.*;
+import pt.up.fe.comp.jmm.jasmin.*;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -89,15 +88,24 @@ public class Launcher {
         SymbolTableCollector collector = new SymbolTableCollector();
         collector.visit(rootNode, symbolTable);
         System.out.println(symbolTable.print());
- 
-        String content = SpecsIo.read("./test/fixtures/public/ollir/myclass3.ollir");
-        //System.out.println(content);
-        //OllirResult ollirResult = new OllirResult(content, new HashMap<String, String>());
+        */
 
-        JasminGenerator generator = new JasminGenerator();
-        generator.toJasmin(ollirResult);
+        if (args.length != 1) {
+            throw new RuntimeException("Expected a single argument, a path to an existing input file.");
+        }
+        File inputFile = new File("./test/fixtures/public/ollir/" + args[0]);
+        if (!inputFile.isFile()) {
+            throw new RuntimeException("Expected a path to an existing input file.");
+        }
+        String content = SpecsIo.read(inputFile);
+        OllirResult ollirResult = new OllirResult(content, new HashMap<String, String>());
+
+        OllirToJasmin converter = new OllirToJasmin();
+        JasminResult result = converter.toJasmin(ollirResult);
+
+        result.compile();
+        result.run();
 
         // ... add remaining stages
     }
-
 }

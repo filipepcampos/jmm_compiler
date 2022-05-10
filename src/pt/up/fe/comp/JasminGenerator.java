@@ -317,7 +317,7 @@ public class JasminGenerator {
 
         if (operand instanceof ArrayOperand) {
             result.append("\taload ").append(varTable.get(operand.getName()).getVirtualReg()).append("\n");
-            result.append(this.loadElement(((ArrayOperand) operand).getIndexOperands().get(0), varTable));
+            result.append(this.loadElement(((ArrayOperand) operand).getIndexOperands().get(0), varTable));  // TODO: Support for multiple dimensional arrays
         }
 
         // deal with value of right hand side of instruction first

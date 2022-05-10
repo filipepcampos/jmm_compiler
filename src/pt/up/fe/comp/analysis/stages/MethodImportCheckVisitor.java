@@ -20,12 +20,39 @@ public class MethodImportCheckVisitor extends PreorderJmmVisitor<List<Report>, B
         this.imports = imports;
         addVisit("Parameter", this::visitDeclaration);
         addVisit("VarDeclaration", this::visitDeclaration);
+        addVisit("ClassMethod", this::visitClassMethod);
         setDefaultVisit(this::defaultVisit);
     }
 
     private Boolean defaultVisit(JmmNode node, List<Report> reports){
         for(var child : node.getChildren()){
             visit(child, reports);
+        }
+        return true;
+    }
+
+    private Boolean visitClassMethod(JmmNode node, List<Report> reports){
+        String className = node.getJmmChild(0).get("name");
+        
+        if(!(symbolTable.getImports().contains(className) || className.equals("this"))){
+            for(Symbol s : symbolTable.getLocalVariables(methodSignature)){
+                if(s.getName().equals(className)){
+                    return true;
+                }
+            }
+            for(Symbol s : symbolTable.getParameters(methodSignature)){
+                if(s.getName().equals(className)){
+                    return true;
+                }
+            }
+            for(Symbol s : symbolTable.getFields()){
+                if(s.getName().equals(className)){
+                    return true;
+                }
+            }
+            reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC,
+                Integer.parseInt(node.get("line")), Integer.parseInt(node.get("col")),
+                "Class " + className + " has not been imported."));
         }
         return true;
     }

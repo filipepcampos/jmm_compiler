@@ -212,13 +212,13 @@ public class JasminGenerator {
     }
 
     private String getJasminType(Type type) {
-        ElementType elementType = type.getTypeOfElement();
+
         StringBuilder result = new StringBuilder();
 
+        ElementType elementType = type.getTypeOfElement();
         if (elementType == ElementType.ARRAYREF) {
-            ArrayType arrayType = (ArrayType) type;
-            elementType = arrayType.getTypeOfElements();
-            result.append("[".repeat(arrayType.getNumDimensions()));
+            result.append("[".repeat(((ArrayType) type).getNumDimensions()));
+            elementType = ((ArrayType) type).getArrayType();
         }
 
         switch (elementType) {

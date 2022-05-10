@@ -97,7 +97,12 @@ public class JasminGenerator {
         StringBuilder result = new StringBuilder();
 
         result.append(".field ");
-        result.append(field.getFieldAccessModifier().name().toLowerCase()).append(" ");
+        String modifier = field.getFieldAccessModifier().name().toLowerCase();
+        if (modifier.equals("default")) {    // TODO: Doubt
+            result.append("private ");
+        } else {
+            result.append(modifier).append(" ");
+        }
         result.append(field.getFieldName()).append(" ");
         result.append(this.getJasminType(field.getFieldType())).append("\n");
 

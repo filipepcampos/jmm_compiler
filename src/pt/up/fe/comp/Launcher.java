@@ -93,7 +93,7 @@ public class Launcher {
         if (args.length != 1) {
             throw new RuntimeException("Expected a single argument, a path to an existing input file.");
         }
-        File inputFile = new File("./test/fixtures/public/ollir/" + args[0]);
+        File inputFile = new File("./test/fixtures/public/" + args[0]);
         if (!inputFile.isFile()) {
             throw new RuntimeException("Expected a path to an existing input file.");
         }

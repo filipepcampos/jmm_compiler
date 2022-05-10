@@ -5,8 +5,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import pt.up.fe.comp.analysis.JmmAnalyser;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
 import pt.up.fe.comp.jmm.report.ReportType;
+import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
@@ -23,7 +25,6 @@ import java.nio.file.Paths;
 public class Launcher {
 
     public static void main(String[] args) {
-        /*
         SpecsSystem.programStandardInit();
 
         SpecsLogs.info("Executing with args: " + Arrays.toString(args));
@@ -50,7 +51,7 @@ public class Launcher {
         SimpleParser parser = new SimpleParser();
 
         // Parse stage
-        JmmParserResult parserResult = parser.parse(input, config);
+        JmmParserResult parserResult = parser.parse(input, "Program", config);
 
         // Check if there are parsing errors
         parserResult.getReports().stream()
@@ -61,7 +62,7 @@ public class Launcher {
                     System.out.println(report.getMessage());
                 }
             });
-        
+
         JmmNode rootNode = parserResult.getRootNode();
         if (rootNode != null) {
             System.out.println(rootNode.toTree());
@@ -70,7 +71,20 @@ public class Launcher {
             return;
         }
         
-        MapSymbolTable symbolTable = new MapSymbolTable();
+        // Analysis Stage
+        JmmAnalyser analyser = new JmmAnalyser();
+        JmmSemanticsResult analysisResult = analyser.semanticAnalysis(parserResult);
+        System.out.println(analysisResult.getSymbolTable().print());
+        TestUtils.noErrors(analysisResult);
+
+        // AST to OLLIR
+        JmmOptimizer optimizer = new JmmOptimizer();
+        var ollirResult = optimizer.toOllir(analysisResult);
+        //var optimizationResult = optimizer.optimize(analysisResult);
+    
+        TestUtils.noErrors(ollirResult);
+
+        SymbolTableBuilder symbolTable = new SymbolTableBuilder();
         SymbolTableCollector collector = new SymbolTableCollector();
         collector.visit(rootNode, symbolTable);
         System.out.println(symbolTable.print());

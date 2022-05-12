@@ -102,7 +102,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         Symbol symbol = getSymbolByName(name, node, reports);
         if(symbol == null){
             reports.add(createSemanticError(node, "Symbol " + name + " is not defined." ));
-            return new JmmType("int", false); // TODO: Returning null crashes program before report is parsed
+            return new JmmType("", false);
         }
         return new JmmType(symbol.getType());
     }
@@ -112,16 +112,13 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         JmmType childType = visit(child, reports);
         if(!childType.isArray()){
             reports.add(createSemanticError(node, "Symbol doesn't support the .length op because it is not an array."));
-            //return new JmmType(null, false);  // TODO: Returning null crashes program before report is parsed
+            return new JmmType("", false);
         }
         return new JmmType("int", false);
     }
 
     private JmmType visitBinaryOp(JmmNode node, List<Report> reports){
         String op = node.get("op");
-        if(node.getNumChildren() != 2){
-            // TODO: Error?
-        }
         JmmType firstChildType = visit(node.getJmmChild(0), reports);
         JmmType secondChildType = visit(node.getJmmChild(1), reports);
 
@@ -155,16 +152,11 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
                     reports.add(createSemanticError(node, "Invalid type for " + op ));
                 }
         }
-        return new JmmType("int", false); // TODO:Returning null crashes program before report is parsed
+        return new JmmType("", false);
     }
 
     private JmmType visitClassMethod(JmmNode node, List<Report> reports){
         String methodName = node.get("name");
-
-        if(node.getNumChildren() != 2){
-            // TODO: Error?
-        }
-
 
         JmmNode classIdNode = node.getJmmChild(0);
         String className = classIdNode.get("name");
@@ -204,13 +196,10 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
             return new JmmType(null, false, true);
         }
     
-        return new JmmType("int", false); // TODO: Returning null crashes program before report is parsed
+        return new JmmType("", false);
     }
 
     private JmmType visitCondition(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Error?
-        }
         JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(new JmmType("boolean", false))){
             reports.add(createSemanticError(node, "Condition is not a boolean"));
@@ -219,9 +208,6 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitAssignment(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Error?
-        }
         JmmType childType = visit(node.getJmmChild(0), reports);
         Symbol symbol = getSymbolByName(node.get("name"));
         if(!childType.equals(symbol.getType())){
@@ -233,10 +219,6 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitArrayAssignment(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 2){
-            // TODO: Error?
-        }
-
         JmmType indexType = visit(node.getJmmChild(0), reports);
         if(!indexType.equals(new JmmType("int", false))){
             reports.add(createSemanticError(node, "Invalid type for array index"));
@@ -257,10 +239,6 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitArrayAccess(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 2){
-            // TODO: Error?
-        }
-        
         String arrayName = node.getJmmChild(0).get("name");
         Symbol arraySymbol = getSymbolByName(arrayName);
 
@@ -280,9 +258,6 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitArrayInitialization(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error ?
-        }
         JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(new JmmType("int", false))){
             reports.add(createSemanticError(node, "Invalid type for array size"));
@@ -299,11 +274,8 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitUnaryOp(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error?
-        }
-        if(!node.get("op").equals("NEG")){
-            // TODO: Throw error
+        if(!node.get("op").equals("NEG")){ // Only NEG is supported by the jmm grammar
+            return new JmmType(null, false);
         }
         JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(new JmmType("boolean",false))){
@@ -313,23 +285,14 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitExpressionInParentheses(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error?
-        }
         return visit(node.getJmmChild(0), reports);
     }
 
     private JmmType visitArgument(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error?
-        }
         return visit(node.getJmmChild(0), reports);
     }
 
     private JmmType visitReturnExpression(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error?
-        }
         JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(symbolTable.getReturnType(this.methodSignature))){
             reports.add(createSemanticError(node, "Incompatible return type"));

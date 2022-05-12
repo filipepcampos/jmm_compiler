@@ -58,7 +58,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
             visit(child);
         }
 
-        code.append("}\n");
+        code.append("\n}\n\n");
 
         return 0;
     }
@@ -66,7 +66,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
     private Integer visitMainMethodDecl(JmmNode node, Boolean dummy){
         code.append(".method public static main(args.array.String).V {\n");
         generateMethodStatements(node, "main");
-        code.append("}\n");
+        code.append("\n}\n\n");
         return 0;
     }
 
@@ -85,7 +85,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
 
         code.append("{\n");
         generateMethodStatements(node, methodSignature);
-        code.append("\n}");
+        code.append("\n}\n\n");
         return 0;
     }
 
@@ -98,16 +98,11 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
         }
 
         String ollirReturnType = OllirUtils.getCode(symbolTable.getReturnType(methodSignature));
-        System.out.println("debug: " + methodSignature);
-        System.out.println("debug, method has return type: " + ollirReturnType);
-        System.out.println(symbolTable.getParameters("main"));
         var stmts = node.getChildren().subList(lastParamIndex+1, node.getNumChildren());
 
-        System.out.println("STMTS: " + stmts);
         OllirStatementGenerator stmtGenerator = new OllirStatementGenerator(symbolTable, methodSignature);
         for(var stmt : stmts){
-            System.out.println("Visiting stmt " + stmt.getKind() + ":");
-            OllirStatement ollirStatement = stmtGenerator.visit(stmt, ollirReturnType);
+            OllirStatement ollirStatement = stmtGenerator.visit(stmt, new OllirGeneratorHint(methodSignature, ollirReturnType, false));
             code.append(ollirStatement.getCodeBefore());
         }
     }

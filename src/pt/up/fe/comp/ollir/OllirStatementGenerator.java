@@ -10,7 +10,7 @@ import pt.up.fe.comp.ollir.OllirStatement;
 import java.util.List;
 import java.util.ArrayList;
 
-public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement> {
+public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, OllirStatement> {
     SymbolTable symbolTable;
     String methodSignature;
     Integer temporaryVariableCounter = 0;
@@ -43,23 +43,21 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
         */
     }
 
-    private OllirStatement defaultVisit(JmmNode node, String expectedType){
+    private OllirStatement defaultVisit(JmmNode node, OllirGeneratorHint hint){
         for(var child : node.getChildren()){
-            visit(child, "");
+            visit(child, hint);
         }
         return new OllirStatement("", "");
     }
 
-    private OllirStatement visitAssignment(JmmNode node, String dummy){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error?
-        }
+    private OllirStatement visitAssignment(JmmNode node, OllirGeneratorHint hint){
         StringBuilder code = new StringBuilder();
         String name = node.get("name");
 
         Symbol symbol = findLocal(name);
+        OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(symbol.getType()), hint.getMethodSignature(), false);
         if(symbol != null){
-            OllirStatement stmt = visit(node.getJmmChild(0), OllirUtils.getCode(symbol.getType()));
+            OllirStatement stmt = visit(node.getJmmChild(0), hintForChild);
             code.append(stmt.getCodeBefore());
 
             code.append(symbol.getName())
@@ -69,10 +67,7 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
             code.append(stmt.getResultVariable()).append(";\n");
         } else {
             symbol = findField(name);
-            if(symbol == null){
-                // TODO: Error
-            }
-            OllirStatement stmt = visit(node.getJmmChild(0), OllirUtils.getCode(symbol.getType()));
+            OllirStatement stmt = visit(node.getJmmChild(0), hintForChild);
             code.append(stmt.getCodeBefore());
             code.append("putfield(this, ").append(symbol.getName())
                 .append(", ").append(stmt.getResultVariable()).append(").V;\n");
@@ -81,7 +76,7 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
         return new OllirStatement(code.toString(), symbol.getName());
     }
 
-    private OllirStatement visitIntLiteral(JmmNode node, String expectedType){
+    private OllirStatement visitIntLiteral(JmmNode node, OllirGeneratorHint hint){
         String type = node.get("type");
         String stringValue = node.get("value");
         int value = 0;
@@ -98,19 +93,16 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
         return new OllirStatement("", String.valueOf(value) + ".i32");
     }
 
-    private OllirStatement visitBool(JmmNode node, String expectedType){
+    private OllirStatement visitBool(JmmNode node, OllirGeneratorHint hint){
         String stringValue = node.get("value");
         Integer value = stringValue.equals("true") ? 1 : 0;
         return new OllirStatement("", String.valueOf(value) + ".bool");
     }
 
-    private OllirStatement visitBinaryOp(JmmNode node, String expectedType){
+    private OllirStatement visitBinaryOp(JmmNode node, OllirGeneratorHint hint){
         StringBuilder code = new StringBuilder();
 
         String op = node.get("op");
-        if(node.getNumChildren() != 2){
-            // TODO: Error?
-        }
 
         String returnType = "";
         String operandType = "";
@@ -136,31 +128,31 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
                 break;
         }
 
-        OllirStatement stmt1 = visit(node.getJmmChild(0), operandType);
-        OllirStatement stmt2 = visit(node.getJmmChild(1), operandType);
+        OllirGeneratorHint hintForChild = new OllirGeneratorHint(hint.getMethodSignature(), operandType, true);
+        OllirStatement stmt1 = visit(node.getJmmChild(0), hintForChild);
+        OllirStatement stmt2 = visit(node.getJmmChild(1), hintForChild);
         code.append(stmt1.getCodeBefore());
         code.append(stmt2.getCodeBefore());
 
         String rhs = String.format("%s %s.%s %s", stmt1.getResultVariable(), opSymbol, operandType,stmt2.getResultVariable());
-        String temporaryVariable = assignTemporary(returnType, rhs, code);
-
-        return new OllirStatement(code.toString(), temporaryVariable);
+        if(hint.needsTemporaryVar()) {
+            String temporaryVariable = assignTemporary(returnType, rhs, code);
+            return new OllirStatement(code.toString(), temporaryVariable);
+        }
+        return new OllirStatement(code.toString(), rhs);
     }
 
-    private OllirStatement visitUnaryOp(JmmNode node, String expectedType){
+    private OllirStatement visitUnaryOp(JmmNode node, OllirGeneratorHint hint){ // TODO: Implement
         StringBuilder code = new StringBuilder();
 
         String op = node.get("op");
-        if(node.getNumChildren() != 1){
-            // TODO: Error?
-        }
         if(!op.equals("NEG")){
             // TODO: Throw error
         }
         return new OllirStatement(code.toString(), "");
     }
 
-    private OllirStatement visitId(JmmNode node, String expectedType){
+    private OllirStatement visitId(JmmNode node, OllirGeneratorHint hint){
         String name = node.get("name");
         Symbol symbol = findLocal(name);
         if(symbol != null){
@@ -177,12 +169,10 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
         return new OllirStatement("", "");
     }
 
-    private OllirStatement visitReturnExpression(JmmNode node, String expectedType){
+    private OllirStatement visitReturnExpression(JmmNode node, OllirGeneratorHint hint){
         StringBuilder code = new StringBuilder();
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error
-        }
-        OllirStatement stmt = visit(node.getJmmChild(0), expectedType);
+        OllirStatement stmt = visit(node.getJmmChild(0),
+                new OllirGeneratorHint(hint.getMethodSignature(), hint.getExpectedType(), true));
 
         String[] splitString = stmt.getResultVariable().split("\\.");
         String type = splitString[splitString.length-1];
@@ -192,20 +182,17 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
         return new OllirStatement(code.toString(), "");
     }
 
-    private OllirStatement visitClassMethod(JmmNode node, String expectedType){
-        if(node.getNumChildren() != 2){
-            // TODO: Throw error
-        }
+    private OllirStatement visitClassMethod(JmmNode node, OllirGeneratorHint hint){
         StringBuilder code = new StringBuilder();
         String methodName = node.get("name");
 
         // ID Node
         JmmNode idNode = node.getJmmChild(0);
-        OllirStatement idStmt = visit(idNode, "");
+        OllirStatement idStmt = visit(idNode, hint);
         String idName = idNode.get("name");
 
         // Arguments Node
-        OllirStatement argumentStmt = visit(node.getJmmChild(1), methodName);
+        OllirStatement argumentStmt = visit(node.getJmmChild(1), new OllirGeneratorHint(idName));
         code.append(argumentStmt.getCodeBefore());
 
         StringBuilder methodCallCode = new StringBuilder();
@@ -224,8 +211,7 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
         methodCallCode.append(argumentStmt.getResultVariable()).append(")");
 
         // Return
-        String returnTypeString = expectedType;
-        System.out.println(methodName + "--> " + expectedType);
+        String returnTypeString = hint.getExpectedType();
         if(idName.equals("this")) {
             Type returnType = symbolTable.getReturnType(methodName);
             returnTypeString = OllirUtils.getCode(returnType);
@@ -236,20 +222,24 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
             code.append(methodCallCode).append(";\n");
             return new OllirStatement(code.toString(), "");   
         } else {
-            String temporaryVariable = assignTemporary(returnTypeString, methodCallCode.toString(), code);
-            return new OllirStatement(code.toString(), temporaryVariable);
+            if(hint.needsTemporaryVar()){
+                String temporaryVariable = assignTemporary(returnTypeString, methodCallCode.toString(), code);
+                return new OllirStatement(code.toString(), temporaryVariable);
+            } else {
+                return new OllirStatement(code.toString(), methodCallCode.toString());
+            }
         }
     }
 
     // Receives methodName to search for parameter types
-    private OllirStatement visitArguments(JmmNode node, String methodName){
+    private OllirStatement visitArguments(JmmNode node, OllirGeneratorHint hint){
         StringBuilder code = new StringBuilder();
         StringBuilder argumentList = new StringBuilder();
 
         Boolean parametersAreAvailable = false;
         List<Symbol> parameters;
-        if(symbolTable.getMethods().contains(methodName)){
-            parameters = symbolTable.getParameters(methodName);
+        if(symbolTable.getMethods().contains(hint.getMethodSignature())){
+            parameters = symbolTable.getParameters(hint.getMethodSignature());
             parametersAreAvailable = true;
         } else {
             parameters = new ArrayList<>();
@@ -258,9 +248,11 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
         for(int i = 0; i < node.getNumChildren(); ++i){
             OllirStatement childStmt;
             if(parametersAreAvailable){
-                childStmt = visit(node.getJmmChild(i), OllirUtils.getCode(parameters.get(i).getType()));
+                OllirGeneratorHint childHint = new OllirGeneratorHint(hint.getMethodSignature(),
+                        OllirUtils.getCode(parameters.get(i).getType()), true);
+                childStmt = visit(node.getJmmChild(i), childHint);
             } else {
-                childStmt = visit(node.getJmmChild(i), "");
+                childStmt = visit(node.getJmmChild(i), new OllirGeneratorHint(hint.getMethodSignature()));
             }
             code.append(childStmt.getCodeBefore());
             argumentList.append(", ").append(childStmt.getResultVariable());
@@ -268,18 +260,12 @@ public class OllirStatementGenerator extends AJmmVisitor<String, OllirStatement>
         return new OllirStatement(code.toString(), argumentList.toString());
     }
 
-    private OllirStatement visitArgument(JmmNode node, String expectedType){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error
-        }
-        return visit(node.getJmmChild(0), expectedType);
+    private OllirStatement visitArgument(JmmNode node, OllirGeneratorHint hint){
+        return visit(node.getJmmChild(0), hint);
     }
 
-    private OllirStatement visitStatementExpression(JmmNode node, String expectedType){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error
-        }
-        OllirStatement stmt = visit(node.getJmmChild(0), "V");
+    private OllirStatement visitStatementExpression(JmmNode node, OllirGeneratorHint hint){
+        OllirStatement stmt = visit(node.getJmmChild(0), new OllirGeneratorHint(hint.getMethodSignature(), "V", true));
         return new OllirStatement(stmt.getCodeBefore(), "");
     }
 

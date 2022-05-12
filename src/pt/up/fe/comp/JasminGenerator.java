@@ -297,7 +297,7 @@ public class JasminGenerator {
                 result.append(this.getCode((PutFieldInstruction) instruction, varTable));
                 break;
             case UNARYOPER:
-                throw new NotImplementedException(instruction.getInstType());
+                result.append(this.getCode((UnaryOpInstruction) instruction, varTable));
             case BINARYOPER:
                 result.append(this.getCode((BinaryOpInstruction) instruction, varTable));
                 break;
@@ -402,6 +402,16 @@ public class JasminGenerator {
         result.append(this.getElementClass(instruction.getFirstOperand())).append("/");
         result.append(((Operand) instruction.getSecondOperand()).getName()).append(" ");
         result.append(this.getJasminType(((Operand) instruction.getSecondOperand()).getType())).append("\n");
+
+        return result.toString();
+    }
+
+    private String getCode(UnaryOpInstruction instruction, HashMap<String, Descriptor> varTable) {
+
+        StringBuilder result = new StringBuilder();
+
+        result.append(this.loadElement(instruction.getOperand(), varTable));
+        result.append("\tineg\n");
 
         return result.toString();
     }

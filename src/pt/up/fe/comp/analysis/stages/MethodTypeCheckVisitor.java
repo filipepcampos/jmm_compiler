@@ -1,4 +1,5 @@
 package pt.up.fe.comp.analysis.stages;
+import pt.up.fe.comp.analysis.AnalysisUtils;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Type;
@@ -169,7 +170,6 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
                 List<Symbol> methodParameters = symbolTable.getParameters(methodName);
 
                 List<Report> methodCallReports = new ArrayList<>();
-                System.out.println("VISIT --- " + methodName + " -> " + methodParameters.size() + " vs " + argumentsNode.getNumChildren());
                 if(methodParameters.size() != argumentsNode.getNumChildren()){
                     methodCallReports.add(createSemanticError(node, "Invalid number of arguments for method " + methodName + " expected " + methodParameters.size() + " arguments but got " + argumentsNode.getNumChildren() + " instead"));
                 } else {
@@ -210,7 +210,8 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     private JmmType visitAssignment(JmmNode node, List<Report> reports){
         JmmType childType = visit(node.getJmmChild(0), reports);
         Symbol symbol = getSymbolByName(node.get("name"));
-        if(!childType.equals(symbol.getType())){
+
+        if(!AnalysisUtils.isAssignable(symbolTable, new JmmType(symbol.getType()), childType)){
             reports.add(createSemanticError(node, "Invalid assignment type for symbol " + symbol.getName()));
         }
 

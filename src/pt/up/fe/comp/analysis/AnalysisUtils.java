@@ -10,7 +10,23 @@ public class AnalysisUtils {
         if(typeName.equals(table.getClassName()) || typeName.equals(table.getSuper())){
             return true;
         }
-        if(typeName.equals("int") || typeName.equals("bool") || typeName.equals("String")){
+        if(typeName.equals("int") || typeName.equals("boolean") || typeName.equals("String")){
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isAssignable(SymbolTable table, JmmType lhs, JmmType rhs){
+        if(rhs.equals(lhs)){
+            return true;
+        }
+        if(lhs.getName().equals(table.getSuper()) && rhs.getName().equals(table.getClassName())){
+            return lhs.isArray() == rhs.isArray();
+        }
+        if(!isNativeType(table, rhs)){
+            if(lhs.getName().equals(table.getClassName()) || lhs.getName().equals(table.getSuper())){
+                return table.getSuper() != null; // class extends another class
+            }
             return true;
         }
         return false;

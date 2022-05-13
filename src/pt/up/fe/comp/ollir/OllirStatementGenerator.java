@@ -30,16 +30,18 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         addVisit("Arguments", this::visitArguments);
         addVisit("Argument", this::visitArgument);
         addVisit("StatementExpression", this::visitStatementExpression);
+        addVisit("ClassInitialization", this::visitClassInitialization);
 
         /*
         addVisit("LengthOp", this::visitLengthOp);
-        addVisit("BinaryOp", this::visitBinaryOp);
         addVisit("Condition", this::visitCondition);
         addVisit("ArrayAccess", this::visitArrayAccess);
         addVisit("ArrayInitialization", this::visitArrayInitialization);
-        addVisit("UnaryOp", this::visitUnaryOp);
         addVisit("ExpressionInParentheses", this::visitExpressionInParentheses);
         addVisit("ArrayAssignment", this::visitArrayAssignment);
+        ifStatement
+        whileStatement
+        statementScope
         */
     }
 
@@ -267,6 +269,14 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
     private OllirStatement visitStatementExpression(JmmNode node, OllirGeneratorHint hint){
         OllirStatement stmt = visit(node.getJmmChild(0), new OllirGeneratorHint(hint.getMethodSignature(), "V", true));
         return new OllirStatement(stmt.getCodeBefore(), "");
+    }
+
+    private OllirStatement visitClassInitialization(JmmNode node, OllirGeneratorHint hint) {
+        StringBuilder code = new StringBuilder();
+        String className = node.get("name");
+        String temporaryVar = assignTemporary(className, String.format("new(%s).%s", className, className), code);
+        code.append("invokespecial(").append(temporaryVar).append(", \"<init>\").V;\n");
+        return new OllirStatement(code.toString(), temporaryVar);
     }
 
     // Appends a new temporary assignment to the code StringBuilder and returns the variable name

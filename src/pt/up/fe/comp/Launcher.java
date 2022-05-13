@@ -6,10 +6,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import pt.up.fe.comp.analysis.JmmAnalyser;
+import pt.up.fe.comp.analysis.table.SymbolTableBuilder;
+import pt.up.fe.comp.analysis.table.SymbolTableCollector;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ast.JmmNode;
+import pt.up.fe.comp.ollir.JmmOptimizer;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
@@ -23,8 +26,6 @@ import java.nio.file.Paths;
 public class Launcher {
 
     public static void main(String[] args) {
-
-        /*
         SpecsSystem.programStandardInit();
 
         SpecsLogs.info("Executing with args: " + Arrays.toString(args));
@@ -87,9 +88,9 @@ public class Launcher {
         SymbolTableBuilder symbolTable = new SymbolTableBuilder();
         SymbolTableCollector collector = new SymbolTableCollector();
         collector.visit(rootNode, symbolTable);
-        System.out.println(symbolTable.print());
-        */
 
+
+        /*
         if (args.length != 1) {
             throw new RuntimeException("Expected a single argument, a path to an existing input file.");
         }
@@ -104,7 +105,7 @@ public class Launcher {
         JasminResult result = converter.toJasmin(ollirResult);
 
         result.compile();
-        result.run();
+        result.run();*/
 
         // ... add remaining stages
     }

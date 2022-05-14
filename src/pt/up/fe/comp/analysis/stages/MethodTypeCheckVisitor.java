@@ -1,5 +1,6 @@
 package pt.up.fe.comp.analysis.stages;
 import pt.up.fe.comp.analysis.AnalysisUtils;
+import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Type;
@@ -33,22 +34,22 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         parametersAndFields.addAll(symbolTable.getParameters(methodSignature));
         parametersAndFields.addAll(symbolTable.getFields());
 
-        addVisit("IntLiteral", this::visitIntLiteral);
-        addVisit("Id", this::visitId);
-        addVisit("LengthOp", this::visitLengthOp);
-        addVisit("BinaryOp", this::visitBinaryOp);
-        addVisit("ClassMethod", this::visitClassMethod);
-        addVisit("Condition", this::visitCondition);
-        addVisit("Assignment", this::visitAssignment);
-        addVisit("ArrayAccess", this::visitArrayAccess);
-        addVisit("ArrayInitialization", this::visitArrayInitialization);
-        addVisit("ClassInitialization", this::visitClassInitialization);
-        addVisit("Bool", this::visitBool);
-        addVisit("UnaryOp", this::visitUnaryOp);
-        addVisit("ExpressionInParentheses", this::visitExpressionInParentheses);
-        addVisit("ArrayAssignment", this::visitArrayAssignment);
-        addVisit("Argument", this::visitArgument);
-        addVisit("ReturnExpression", this::visitReturnExpression);
+        addVisit(AstNode.INT_LITERAL, this::visitIntLiteral);
+        addVisit(AstNode.ID, this::visitId);
+        addVisit(AstNode.LENGTH_OP, this::visitLengthOp);
+        addVisit(AstNode.BINARY_OP, this::visitBinaryOp);
+        addVisit(AstNode.CLASS_METHOD, this::visitClassMethod);
+        addVisit(AstNode.CONDITION, this::visitCondition);
+        addVisit(AstNode.ASSIGNMENT, this::visitAssignment);
+        addVisit(AstNode.ARRAY_ACCESS, this::visitArrayAccess);
+        addVisit(AstNode.ARRAY_INITIALIZATION, this::visitArrayInitialization);
+        addVisit(AstNode.CLASS_INITIALIZATION, this::visitClassInitialization);
+        addVisit(AstNode.BOOL, this::visitBool);
+        addVisit(AstNode.UNARY_OP, this::visitUnaryOp);
+        addVisit(AstNode.EXPRESSION_IN_PARENTHESES, this::visitExpressionInParentheses);
+        addVisit(AstNode.ARRAY_ASSIGNMENT, this::visitArrayAssignment);
+        addVisit(AstNode.ARGUMENT, this::visitArgument);
+        addVisit(AstNode.RETURN_EXPRESSION, this::visitReturnExpression);
         setDefaultVisit(this::defaultVisit);
     }
 

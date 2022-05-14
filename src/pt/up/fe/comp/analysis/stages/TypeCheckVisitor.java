@@ -1,4 +1,5 @@
 package pt.up.fe.comp.analysis.stages;
+import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
@@ -10,8 +11,8 @@ public class TypeCheckVisitor extends PreorderJmmVisitor<List<Report>, Boolean> 
 
     public TypeCheckVisitor(SymbolTable symbolTable) {
         this.symbolTable = symbolTable;
-        addVisit("MainMethodDeclaration", this::visitMainMethodDeclaration);
-        addVisit("InstanceMethodDeclaration", this::visitInstanceMethodDeclaration);
+        addVisit(AstNode.MAIN_METHOD_DECLARATION, this::visitMainMethodDeclaration);
+        addVisit(AstNode.INSTANCE_METHOD_DECLARATION, this::visitInstanceMethodDeclaration);
     }
 
     private Boolean visitMainMethodDeclaration(JmmNode node, List<Report> reports){

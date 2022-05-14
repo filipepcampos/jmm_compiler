@@ -1,5 +1,6 @@
 package pt.up.fe.comp.ollir;
 
+import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
@@ -16,11 +17,11 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
         this.code = new StringBuilder();
         this.symbolTable = symbolTable;
 
-        addVisit("Program", this::visitProgram);
-        addVisit("ClassDeclaration", this::visitClassDecl);
-        addVisit("MainMethodDeclaration", this::visitMainMethodDecl);
-        addVisit("InstanceMethodDeclaration", this::visitInstanceMethodDecl);
-        addVisit("StatementExpression", this::visitStatementExpression);
+        addVisit(AstNode.PROGRAM, this::visitProgram);
+        addVisit(AstNode.CLASS_DECLARATION, this::visitClassDecl);
+        addVisit(AstNode.MAIN_METHOD_DECLARATION, this::visitMainMethodDecl);
+        addVisit(AstNode.INSTANCE_METHOD_DECLARATION, this::visitInstanceMethodDecl);
+        addVisit(AstNode.STATEMENT_EXPRESSION, this::visitStatementExpression);
     }
 
     public String getCode(){

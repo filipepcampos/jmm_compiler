@@ -1,4 +1,5 @@
 package pt.up.fe.comp.analysis.stages;
+import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
@@ -24,10 +25,10 @@ public class ImportCheckVisitor extends AJmmVisitor<List<Report>, Boolean> {
             imports.add(className);
         }
         
-        addVisit("VarDeclaration", this::visitVarDeclaration);
-        addVisit("MainMethodDeclaration", this::visitMainMethodDeclaration);
-        addVisit("InstanceMethodDeclaration", this::visitInstanceMethodDeclaration);
-        addVisit("ClassDeclaration", this::visitClassDeclaration);
+        addVisit(AstNode.VAR_DECLARATION, this::visitVarDeclaration);
+        addVisit(AstNode.MAIN_METHOD_DECLARATION, this::visitMainMethodDeclaration);
+        addVisit(AstNode.INSTANCE_METHOD_DECLARATION, this::visitInstanceMethodDeclaration);
+        addVisit(AstNode.CLASS_DECLARATION, this::visitClassDeclaration);
         setDefaultVisit(this::defaultVisit);
     }
 

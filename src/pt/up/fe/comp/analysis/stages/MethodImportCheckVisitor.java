@@ -1,4 +1,5 @@
 package pt.up.fe.comp.analysis.stages;
+import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
@@ -18,9 +19,9 @@ public class MethodImportCheckVisitor extends PreorderJmmVisitor<List<Report>, B
         this.symbolTable = symbolTable;
         this.methodSignature = methodSignature;
         this.imports = imports;
-        addVisit("Parameter", this::visitDeclaration);
-        addVisit("VarDeclaration", this::visitDeclaration);
-        addVisit("ClassMethod", this::visitClassMethod);
+        addVisit(AstNode.PARAMETER, this::visitDeclaration);
+        addVisit(AstNode.VAR_DECLARATION, this::visitDeclaration);
+        addVisit(AstNode.CLASS_METHOD, this::visitClassMethod);
         setDefaultVisit(this::defaultVisit);
     }
 

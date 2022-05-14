@@ -1,5 +1,6 @@
 package pt.up.fe.comp.ollir;
 
+import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
@@ -19,29 +20,29 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         this.symbolTable = symbolTable;
         this.methodSignature = methodSignature;
         setDefaultVisit(this::defaultVisit);
-        addVisit("Assignment", this::visitAssignment);
-        addVisit("IntLiteral", this::visitIntLiteral);
-        addVisit("UnaryOp", this::visitUnaryOp);
-        addVisit("BinaryOp", this::visitBinaryOp);
-        addVisit("Id", this::visitId);
-        addVisit("Bool", this::visitBool);
-        addVisit("ReturnExpression", this::visitReturnExpression);
-        addVisit("ClassMethod", this::visitClassMethod);
-        addVisit("Arguments", this::visitArguments);
-        addVisit("Argument", this::visitArgument);
-        addVisit("StatementExpression", this::visitStatementExpression);
-        addVisit("ClassInitialization", this::visitClassInitialization);
+        addVisit(AstNode.ASSIGNMENT, this::visitAssignment);
+        addVisit(AstNode.INT_LITERAL, this::visitIntLiteral);
+        addVisit(AstNode.UNARY_OP, this::visitUnaryOp);
+        addVisit(AstNode.BINARY_OP, this::visitBinaryOp);
+        addVisit(AstNode.ID, this::visitId);
+        addVisit(AstNode.BOOL, this::visitBool);
+        addVisit(AstNode.RETURN_EXPRESSION, this::visitReturnExpression);
+        addVisit(AstNode.CLASS_METHOD, this::visitClassMethod);
+        addVisit(AstNode.ARGUMENTS, this::visitArguments);
+        addVisit(AstNode.ARGUMENT, this::visitArgument);
+        addVisit(AstNode.STATEMENT_EXPRESSION, this::visitStatementExpression);
+        addVisit(AstNode.CLASS_INITIALIZATION, this::visitClassInitialization);
 
         /*
-        addVisit("LengthOp", this::visitLengthOp);
-        addVisit("Condition", this::visitCondition);
-        addVisit("ArrayAccess", this::visitArrayAccess);
-        addVisit("ArrayInitialization", this::visitArrayInitialization);
-        addVisit("ExpressionInParentheses", this::visitExpressionInParentheses);
-        addVisit("ArrayAssignment", this::visitArrayAssignment);
-        ifStatement
-        whileStatement
-        statementScope
+        LENGTH_OP,
+        CONDITION,
+        ARRAY_ACCESS,
+        ARRAY_INITIALIZATION,
+        EXPRESSION_IN_PARENTHESES,
+        ARRAY_ASSIGNMENT
+        IF_STATEMENT,
+        WHILE_STATEMENT,
+        STATEMENT_SCOPE
         */
     }
 

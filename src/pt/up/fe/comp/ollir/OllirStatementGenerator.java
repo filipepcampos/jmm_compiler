@@ -48,6 +48,9 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
     private OllirStatement defaultVisit(JmmNode node, OllirGeneratorHint hint){
         for(var child : node.getChildren()){
+            if(hint == null){ // Avoid null hints if node hasn't been implemented yet
+                hint = new OllirGeneratorHint("", "", true);
+            }
             visit(child, hint);
         }
         return new OllirStatement("", "");

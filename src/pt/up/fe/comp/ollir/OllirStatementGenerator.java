@@ -32,6 +32,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         addVisit(AstNode.ARGUMENT, this::visitArgument);
         addVisit(AstNode.STATEMENT_EXPRESSION, this::visitStatementExpression);
         addVisit(AstNode.CLASS_INITIALIZATION, this::visitClassInitialization);
+        addVisit(AstNode.EXPRESSION_IN_PARENTHESES, this::visitExpressionInParentheses);
 
         /*
         LENGTH_OP,
@@ -278,6 +279,11 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         String temporaryVar = assignTemporary(className, String.format("new(%s).%s", className, className), code);
         code.append("invokespecial(").append(temporaryVar).append(", \"<init>\").V;\n");
         return new OllirStatement(code.toString(), temporaryVar);
+    }
+
+    private OllirStatement visitExpressionInParentheses(JmmNode node, OllirGeneratorHint hint) {
+        JmmNode child = node.getJmmChild(0);
+        return visit(child, hint);
     }
 
     // Appends a new temporary assignment to the code StringBuilder and returns the variable name

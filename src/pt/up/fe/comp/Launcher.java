@@ -3,7 +3,9 @@ package pt.up.fe.comp;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import pt.up.fe.comp.analysis.JmmAnalyser;
@@ -51,7 +53,7 @@ public class Launcher {
         SimpleParser parser = new SimpleParser();
 
         // Parse stage
-        JmmParserResult parserResult = parser.parse(input, "Program", config);
+        JmmParserResult parserResult = parser.parse(input,  config);
 
         // Check if there are parsing errors
         parserResult.getReports().stream()
@@ -76,11 +78,13 @@ public class Launcher {
         JmmSemanticsResult analysisResult = analyser.semanticAnalysis(parserResult);
 
         // Check if there are semantic errors
-        Stream<Report> analysisErrorStream = analysisResult.getReports().stream()
-                .filter(report -> report.getType() == ReportType.ERROR);
-        if(analysisErrorStream.findAny().isPresent()){
-            analysisErrorStream.findFirst().ifPresent(report -> {
-                if (report.getException().isPresent()) {
+        var analysisErrors = analysisResult.getReports().stream()
+                .filter(report -> report.getType() == ReportType.ERROR).collect(Collectors.toList());
+        if(analysisErrors.size() > 0){
+            analysisErrors.stream().findFirst().ifPresent(report -> {
+                if (!report.getMessage().isEmpty()) {
+                    System.out.println("Error during semantic analysis at line " + report.getLine()
+                            + " and column " + report.getColumn() + ".");
                     System.out.println(report.getMessage());
                 }
             });

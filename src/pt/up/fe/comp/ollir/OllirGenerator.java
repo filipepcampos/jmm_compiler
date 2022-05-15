@@ -53,13 +53,13 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
         }
 
         code.append(".construct ").append(symbolTable.getClassName())
-            .append("().V{\n  invokespecial(this, \"<init>\").V ;\n}\n");
+            .append("().V{\n  invokespecial(this, \"<init>\").V ;\n}\n\n");
         
         for(var child : node.getChildren()){
             visit(child);
         }
 
-        code.append("\n}\n\n");
+        code.append("}\n");
 
         return 0;
     }
@@ -67,7 +67,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
     private Integer visitMainMethodDecl(JmmNode node, Boolean dummy){
         code.append(".method public static main(args.array.String).V {\n");
         generateMethodStatements(node, "main");
-        code.append("\n}\n");
+        code.append("}\n\n");
         return 0;
     }
 
@@ -86,7 +86,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
 
         code.append("{\n");
         generateMethodStatements(node, methodSignature);
-        code.append("\n}\n");
+        code.append("}\n\n");
         return 0;
     }
 

@@ -1,4 +1,4 @@
-package pt.up.fe.comp;
+package pt.up.fe.comp.jasmin;
 
 import pt.up.fe.comp.jmm.jasmin.JasminBackend;
 import pt.up.fe.comp.jmm.jasmin.JasminResult;

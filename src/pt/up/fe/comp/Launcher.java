@@ -16,12 +16,6 @@ import pt.up.fe.comp.ollir.JmmOptimizer;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
-import pt.up.fe.comp.OllirToJasmin;
-import pt.up.fe.comp.jmm.ollir.*;
-import pt.up.fe.comp.jmm.jasmin.*;
-
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class Launcher {
 

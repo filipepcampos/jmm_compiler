@@ -39,7 +39,6 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         CONDITION,
         ARRAY_ACCESS,
         ARRAY_INITIALIZATION,
-        EXPRESSION_IN_PARENTHESES,
         ARRAY_ASSIGNMENT
         IF_STATEMENT,
         WHILE_STATEMENT,

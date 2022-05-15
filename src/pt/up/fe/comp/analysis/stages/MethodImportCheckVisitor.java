@@ -1,5 +1,6 @@
 package pt.up.fe.comp.analysis.stages;
 import pt.up.fe.comp.ast.AstNode;
+import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
@@ -10,7 +11,7 @@ import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.report.Stage;
 import java.util.List;
 
-public class MethodImportCheckVisitor extends PreorderJmmVisitor<List<Report>, Boolean> {
+public class MethodImportCheckVisitor extends AJmmVisitor<List<Report>, Boolean> {
     String methodSignature;
     SymbolTable symbolTable;
     List<String> imports;

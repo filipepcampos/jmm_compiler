@@ -4,11 +4,16 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import pt.up.fe.comp.analysis.JmmAnalyser;
 import pt.up.fe.comp.analysis.table.SymbolTableBuilder;
 import pt.up.fe.comp.analysis.table.SymbolTableCollector;
+import pt.up.fe.comp.jasmin.OllirToJasmin;
+import pt.up.fe.comp.jmm.jasmin.JasminResult;
+import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
+import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -69,38 +74,31 @@ public class Launcher {
         // Analysis Stage
         JmmAnalyser analyser = new JmmAnalyser();
         JmmSemanticsResult analysisResult = analyser.semanticAnalysis(parserResult);
-        System.out.println(analysisResult.getSymbolTable().print());
-        TestUtils.noErrors(analysisResult);
+
+        // Check if there are semantic errors
+        Stream<Report> analysisErrorStream = analysisResult.getReports().stream()
+                .filter(report -> report.getType() == ReportType.ERROR);
+        if(analysisErrorStream.findAny().isPresent()){
+            analysisErrorStream.findFirst().ifPresent(report -> {
+                if (report.getException().isPresent()) {
+                    System.out.println(report.getMessage());
+                }
+            });
+            System.out.println("Program finished due to semantic error.");
+            return;
+        }
 
         // AST to OLLIR
         JmmOptimizer optimizer = new JmmOptimizer();
-        var ollirResult = optimizer.toOllir(analysisResult);
+        OllirResult ollirResult = optimizer.toOllir(analysisResult);
         //var optimizationResult = optimizer.optimize(analysisResult);
-    
         TestUtils.noErrors(ollirResult);
 
-        SymbolTableBuilder symbolTable = new SymbolTableBuilder();
-        SymbolTableCollector collector = new SymbolTableCollector();
-        collector.visit(rootNode, symbolTable);
-
-
-        /*
-        if (args.length != 1) {
-            throw new RuntimeException("Expected a single argument, a path to an existing input file.");
-        }
-        File inputFile = new File("./test/fixtures/public/" + args[0]);
-        if (!inputFile.isFile()) {
-            throw new RuntimeException("Expected a path to an existing input file.");
-        }
-        String content = SpecsIo.read(inputFile);
-        OllirResult ollirResult = new OllirResult(content, new HashMap<String, String>());
-
+        // OLLIR to Jasmin
         OllirToJasmin converter = new OllirToJasmin();
         JasminResult result = converter.toJasmin(ollirResult);
 
         result.compile();
-        result.run();*/
-
-        // ... add remaining stages
+        result.run();
     }
 }

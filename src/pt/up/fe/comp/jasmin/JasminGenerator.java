@@ -203,7 +203,7 @@ public class JasminGenerator {
     }
 
     public String getFullyQualifiedName(String className) {
-        if (className.equals(this.classUnit.getClassName())) {
+        if (className.equals(this.classUnit.getClassName()) || className.equals("main")) {
             return this.classUnit.getClassName();
         }
 
@@ -527,7 +527,7 @@ public class JasminGenerator {
         invokestatic io/println(Ljava/lang/String;)V
         */
 
-        //method.show();  // DEBUG
+        method.show();  // DEBUG
 
         StringBuilder result = new StringBuilder();
 

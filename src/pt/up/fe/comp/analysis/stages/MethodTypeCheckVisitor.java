@@ -162,42 +162,55 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
 
         JmmNode classIdNode = node.getJmmChild(0);
         String className = classIdNode.get("name");
-        Symbol symbol = getSymbolByName(className);
 
         JmmNode argumentsNode = node.getJmmChild(1);
 
-        if(className.equals("this") || (symbol != null && symbol.getType().getName().equals(symbolTable.getClassName()))){
-            if(symbolTable.getMethods().contains(methodName)){
-                List<Symbol> methodParameters = symbolTable.getParameters(methodName);
+        boolean knownMethod = false;
+        if(className.equals("this") || isClassOrSuper(className)){
+            if(methodSignature.equals("main")){
+                reports.add(createSemanticError(node, "Cannot invoke non-static method from a static context"));
+                return new JmmType("", false, false);
+            }
+            knownMethod = true;
+        } else {
+            Symbol symbol = getSymbolByName(className, node, reports);
+            if(symbol != null){
+                Type symbolType = symbol.getType();
+                String symbolTypeName = symbolType.getName();
+                if(symbolType.isArray()){
+                    reports.add(createSemanticError(node, "Method cannot be invoked because " + className + " is an array"));
+                    return new JmmType("", false, false);
+                } else if(isClassOrSuper(symbolTypeName)) {
+                    knownMethod = true;
+                }
+            }
+        }
 
-                List<Report> methodCallReports = new ArrayList<>();
-                if(methodParameters.size() != argumentsNode.getNumChildren()){
-                    methodCallReports.add(createSemanticError(node, "Invalid number of arguments for method " + methodName + " expected " + methodParameters.size() + " arguments but got " + argumentsNode.getNumChildren() + " instead"));
-                } else {
-                    for(int i = 0; i < methodParameters.size(); ++i){
-                        Type parameterType = methodParameters.get(i).getType();
-                        JmmType argumentType = visit(argumentsNode.getJmmChild(i), reports);
-                        if(!argumentType.equals(parameterType)){
-                            methodCallReports.add(createSemanticError(node, "Argument type doesn't match required parameter type for method " + methodName));
-                        }
+        if(knownMethod){ // Method information is known because method is registered in the symbolTable
+            List<Symbol> methodParameters = symbolTable.getParameters(methodName);
+
+            List<Report> methodCallReports = new ArrayList<>();
+            if(methodParameters.size() != argumentsNode.getNumChildren()){
+                methodCallReports.add(createSemanticError(node, "Invalid number of arguments for method " + methodName + " expected " + methodParameters.size() + " arguments but got " + argumentsNode.getNumChildren() + " instead"));
+            } else {
+                for(int i = 0; i < methodParameters.size(); ++i){
+                    Type parameterType = methodParameters.get(i).getType();
+                    JmmType argumentType = visit(argumentsNode.getJmmChild(i), reports);
+                    if(!argumentType.equals(parameterType)){
+                        methodCallReports.add(createSemanticError(node, "Argument type doesn't match required parameter type for method " + methodName));
                     }
                 }
-                
-                if(symbolTable.getSuper() == null){
-                    reports.addAll(methodCallReports);    
-                    return new JmmType(symbolTable.getReturnType(methodName));
-                }
-                return new JmmType(null, false, true);
             }
-            if(symbolTable.getSuper() != null){
-                return new JmmType(null, false, true);
+
+            if(symbolTable.getSuper() == null){
+                reports.addAll(methodCallReports);
+                return new JmmType(symbolTable.getReturnType(methodName));
             }
+
             reports.add(createSemanticError(node, "Method " + methodName + " does not exist."));
-        } else {
             return new JmmType(null, false, true);
         }
-    
-        return new JmmType("", false);
+        return new JmmType(null, false, true); // Assume the type is correct
     }
 
     private JmmType visitCondition(JmmNode node, List<Report> reports){
@@ -242,7 +255,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
 
     private JmmType visitArrayAccess(JmmNode node, List<Report> reports){
         String arrayName = node.getJmmChild(0).get("name");
-        Symbol arraySymbol = getSymbolByName(arrayName);
+        Symbol arraySymbol = getSymbolByName(arrayName, node, reports);
 
         if(arraySymbol == null){
             reports.add(createSemanticError(node, "Symbol " + arrayName + " not defined."));
@@ -300,6 +313,10 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
             reports.add(createSemanticError(node, "Incompatible return type"));
         }
         return new JmmType(null, false);
+    }
+
+    private boolean isClassOrSuper(String name){
+        return name.equals(symbolTable.getClassName()) || name.equals(symbolTable.getSuper());
     }
 
     private Report createSemanticError(JmmNode node, String message){

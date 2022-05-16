@@ -61,8 +61,8 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         String name = node.get("name");
 
         Symbol symbol = findLocal(name);
-        OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(symbol.getType()), hint.getMethodSignature(), false);
         if(symbol != null){
+            OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(symbol.getType()), hint.getMethodSignature(), false);
             OllirStatement stmt = visit(node.getJmmChild(0), hintForChild);
             code.append(stmt.getCodeBefore());
 
@@ -73,6 +73,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             code.append(stmt.getResultVariable()).append(";\n");
         } else {
             symbol = findField(name);
+            OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(symbol.getType()), hint.getMethodSignature(), false);
             OllirStatement stmt = visit(node.getJmmChild(0), hintForChild);
             code.append(stmt.getCodeBefore());
             code.append("putfield(this, ").append(symbol.getName())
@@ -218,10 +219,27 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
         // Return
         String returnTypeString = hint.getExpectedType();
-        if(idName.equals("this")) {
+        boolean returnTypeIsKnown = false;
+        if(idName.equals("this") || idName.equals(symbolTable.getClassName()) || idName.equals(symbolTable.getSuper())) {
+            returnTypeIsKnown = true;
+        }
+        else {
+            Symbol s = findSymbol(idName);
+            if(s != null){
+                String symbolTypeName = s.getType().getName();
+                if(!s.getType().isArray()
+                    && (symbolTypeName.equals(symbolTable.getClassName()) || symbolTypeName.equals(symbolTable.getSuper())
+                )){
+                    returnTypeIsKnown = true;
+                }
+            }
+        }
+
+        if(returnTypeIsKnown){
             Type returnType = symbolTable.getReturnType(methodName);
             returnTypeString = OllirUtils.getCode(returnType);
         }
+
         methodCallCode.append(".").append(returnTypeString);
 
         if(returnTypeString.equals("V")){
@@ -293,6 +311,14 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         String temporary = "t" + temporaryVariableCounter++ + "." + type;
         code.append(temporary).append(" :=.").append(type).append(" ").append(rhs).append(";\n");
         return temporary;
+    }
+
+    private Symbol findSymbol(String name){
+        Symbol s = findLocal(name);
+        if(s == null){
+            return findField(name);
+        }
+        return s;
     }
 
     // Return symbol for a given field

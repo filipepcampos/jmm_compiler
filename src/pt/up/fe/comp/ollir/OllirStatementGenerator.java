@@ -15,6 +15,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
     SymbolTable symbolTable;
     String methodSignature;
     Integer temporaryVariableCounter = 0;
+    Integer labelCounter = 0;
 
     public OllirStatementGenerator(SymbolTable symbolTable, String methodSignature){
         this.symbolTable = symbolTable;
@@ -33,6 +34,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         addVisit(AstNode.STATEMENT_EXPRESSION, this::visitStatementExpression);
         addVisit(AstNode.CLASS_INITIALIZATION, this::visitClassInitialization);
         addVisit(AstNode.EXPRESSION_IN_PARENTHESES, this::visitExpressionInParentheses);
+        addVisit(AstNode.IF_STATEMENT, this::visitIfStatement);
 
         /*
         LENGTH_OP,
@@ -306,6 +308,26 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         return visit(child, hint);
     }
 
+    private OllirStatement visitIfStatement(JmmNode node, OllirGeneratorHint hint){
+        StringBuilder code = new StringBuilder();
+
+        JmmNode conditionNode = node.getJmmChild(0);
+        JmmNode ifNode = node.getJmmChild(1);
+        JmmNode elseNode = node.getJmmChild(2);
+
+        OllirStatement conditionStatement = visit(conditionNode);
+        OllirStatement ifStatement = visit(ifNode);
+        OllirStatement elseStatement = visit(elseNode);
+
+        code.append(conditionStatement.getCodeBefore())
+            .append(String.format("if(%s) goto else%d;\n", conditionStatement.getResultVariable(), labelCounter));
+        code.append(ifStatement.getCodeBefore()).append("goto endif").append(labelCounter).append(";\n");
+        code.append(String.format("else%d:\n", labelCounter));
+        code.append(elseStatement.getCodeBefore()).append("\nendif").append(labelCounter).append(":\n");
+
+        return new OllirStatement(code.toString(),"" );
+    }
+ 
     // Appends a new temporary assignment to the code StringBuilder and returns the variable name
     private String assignTemporary(String type, String rhs, StringBuilder code){
         String temporary = "t" + temporaryVariableCounter++ + "." + type;

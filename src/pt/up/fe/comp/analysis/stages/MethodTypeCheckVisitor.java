@@ -166,7 +166,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         JmmNode argumentsNode = node.getJmmChild(1);
 
         boolean knownMethod = false;
-        if(className.equals("this") || isClassOrSuper(className)){
+        if(className.equals("this") || className.equals(symbolTable.getClassName())){
             if(methodSignature.equals("main")){
                 reports.add(createSemanticError(node, "Cannot invoke non-static method from a static context"));
                 return new JmmType("", false, false);
@@ -180,35 +180,40 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
                 if(symbolType.isArray()){
                     reports.add(createSemanticError(node, "Method cannot be invoked because " + className + " is an array"));
                     return new JmmType("", false, false);
-                } else if(isClassOrSuper(symbolTypeName)) {
+                } else if(symbolTypeName.equals(symbolTable.getClassName())) {
                     knownMethod = true;
                 }
             }
         }
 
-        if(knownMethod){ // Method information is known because method is registered in the symbolTable
-            List<Symbol> methodParameters = symbolTable.getParameters(methodName);
-
+        if(knownMethod){ // Method// information is known because method is registered in the symbolTable
             List<Report> methodCallReports = new ArrayList<>();
-            if(methodParameters.size() != argumentsNode.getNumChildren()){
-                methodCallReports.add(createSemanticError(node, "Invalid number of arguments for method " + methodName + " expected " + methodParameters.size() + " arguments but got " + argumentsNode.getNumChildren() + " instead"));
-            } else {
-                for(int i = 0; i < methodParameters.size(); ++i){
-                    Type parameterType = methodParameters.get(i).getType();
-                    JmmType argumentType = visit(argumentsNode.getJmmChild(i), reports);
-                    if(!argumentType.equals(parameterType)){
-                        methodCallReports.add(createSemanticError(node, "Argument type doesn't match required parameter type for method " + methodName));
+            if(symbolTable.getMethods().contains(methodName)) {
+                List<Symbol> methodParameters = symbolTable.getParameters(methodName);
+                if (methodParameters.size() != argumentsNode.getNumChildren()) {
+                    methodCallReports.add(createSemanticError(node, "Invalid number of arguments for method " + methodName + " expected " + methodParameters.size() + " arguments but got " + argumentsNode.getNumChildren() + " instead"));
+                } else {
+                    for (int i = 0; i < methodParameters.size(); ++i) {
+                        Type parameterType = methodParameters.get(i).getType();
+                        JmmType argumentType = visit(argumentsNode.getJmmChild(i), reports);
+                        if (!argumentType.equals(parameterType)) {
+                            methodCallReports.add(createSemanticError(node, "Argument type doesn't match required parameter type for method " + methodName));
+                        }
                     }
                 }
+            } else {
+                methodCallReports.add(createSemanticError(node, "Method " + methodName + " does not exist."));
             }
 
             if(symbolTable.getSuper() == null){
-                reports.addAll(methodCallReports);
-                return new JmmType(symbolTable.getReturnType(methodName));
+                if(methodCallReports.isEmpty()){
+                    return new JmmType(symbolTable.getReturnType(methodName));
+                } else {
+                    reports.addAll(methodCallReports);
+                    return new JmmType(null, false, true);
+                }
             }
-
-            reports.add(createSemanticError(node, "Method " + methodName + " does not exist."));
-            return new JmmType(null, false, true);
+            return new JmmType(null, false, true); // Assume the type is correct (method in super)
         }
         return new JmmType(null, false, true); // Assume the type is correct
     }

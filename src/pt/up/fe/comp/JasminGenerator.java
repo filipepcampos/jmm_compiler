@@ -437,11 +437,11 @@ public class JasminGenerator {
                 result.append("\tidiv\n");
                 break;
             case LTH:
-                result.append("\tif_icmplt ").append(this.getCondTrueLabel()).append("\n");
-                result.append("\ticonst_1\n");
+                result.append("\tif_icmpgt ").append(this.getCondTrueLabel()).append("\n");     // Operands are switched
+                result.append("\ticonst_0\n");
                 result.append("\tgoto ").append(this.getCondFalseLabel()).append("\n");
                 result.append(this.getCondTrueLabel()).append(":\n");
-                result.append("\ticonst_0\n");
+                result.append("\ticonst_1\n");
                 result.append(this.getCondFalseLabel()).append(":\n");
                 this.numberCond++;
                 break;

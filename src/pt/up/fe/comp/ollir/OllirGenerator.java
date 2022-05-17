@@ -1,5 +1,6 @@
 package pt.up.fe.comp.ollir;
 
+import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
@@ -16,11 +17,11 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
         this.code = new StringBuilder();
         this.symbolTable = symbolTable;
 
-        addVisit("Program", this::visitProgram);
-        addVisit("ClassDeclaration", this::visitClassDecl);
-        addVisit("MainMethodDeclaration", this::visitMainMethodDecl);
-        addVisit("InstanceMethodDeclaration", this::visitInstanceMethodDecl);
-        addVisit("StatementExpression", this::visitStatementExpression);
+        addVisit(AstNode.PROGRAM, this::visitProgram);
+        addVisit(AstNode.CLASS_DECLARATION, this::visitClassDecl);
+        addVisit(AstNode.MAIN_METHOD_DECLARATION, this::visitMainMethodDecl);
+        addVisit(AstNode.INSTANCE_METHOD_DECLARATION, this::visitInstanceMethodDecl);
+        addVisit(AstNode.STATEMENT_EXPRESSION, this::visitStatementExpression);
     }
 
     public String getCode(){
@@ -52,7 +53,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
         }
 
         code.append(".construct ").append(symbolTable.getClassName())
-            .append("().V{\n  invokespecial(this, \"<init>\").V ;\n}\n");
+            .append("().V{\n  invokespecial(this, \"<init>\").V ;\n}\n\n");
         
         for(var child : node.getChildren()){
             visit(child);
@@ -66,7 +67,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
     private Integer visitMainMethodDecl(JmmNode node, Boolean dummy){
         code.append(".method public static main(args.array.String).V {\n");
         generateMethodStatements(node, "main");
-        code.append("}\n");
+        code.append("}\n\n");
         return 0;
     }
 
@@ -85,7 +86,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
 
         code.append("{\n");
         generateMethodStatements(node, methodSignature);
-        code.append("\n}");
+        code.append("}\n\n");
         return 0;
     }
 
@@ -98,16 +99,11 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
         }
 
         String ollirReturnType = OllirUtils.getCode(symbolTable.getReturnType(methodSignature));
-        System.out.println("debug: " + methodSignature);
-        System.out.println("debug, method has return type: " + ollirReturnType);
-        System.out.println(symbolTable.getParameters("main"));
         var stmts = node.getChildren().subList(lastParamIndex+1, node.getNumChildren());
 
-        System.out.println("STMTS: " + stmts);
         OllirStatementGenerator stmtGenerator = new OllirStatementGenerator(symbolTable, methodSignature);
         for(var stmt : stmts){
-            System.out.println("Visiting stmt " + stmt.getKind() + ":");
-            OllirStatement ollirStatement = stmtGenerator.visit(stmt, ollirReturnType);
+            OllirStatement ollirStatement = stmtGenerator.visit(stmt, new OllirGeneratorHint(methodSignature, ollirReturnType, false));
             code.append(ollirStatement.getCodeBefore());
         }
     }

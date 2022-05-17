@@ -42,7 +42,7 @@ public class AnalysisTest {
 
     @Test
     public void quickSort() {
-        noErrors(SpecsIo.getResource("fixtures/public/QuickSort.jmm"));
+        mustFail(SpecsIo.getResource("fixtures/public/QuickSort.jmm"));
     }
 
     @Test

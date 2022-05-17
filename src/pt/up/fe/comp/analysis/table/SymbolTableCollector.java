@@ -1,4 +1,5 @@
 package pt.up.fe.comp.analysis.table;
+import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
@@ -9,12 +10,12 @@ import java.util.Optional;
 public class SymbolTableCollector extends AJmmVisitor<SymbolTableBuilder, Boolean> {
 
     public SymbolTableCollector() {
-        addVisit("Program", this::visitProgram);
-        addVisit("ImportDecl", this::visitImportDecl);
-        addVisit("ClassDeclaration", this::visitClassDeclaration);
-        addVisit("VarDeclaration", this::visitVarDeclaration);
-        addVisit("MainMethodDeclaration", this::visitMethodDeclaration);
-        addVisit("InstanceMethodDeclaration", this::visitMethodDeclaration);
+        addVisit(AstNode.PROGRAM, this::visitProgram);
+        addVisit(AstNode.IMPORT_DECL, this::visitImportDecl);
+        addVisit(AstNode.CLASS_DECLARATION, this::visitClassDeclaration);
+        addVisit(AstNode.VAR_DECLARATION, this::visitVarDeclaration);
+        addVisit(AstNode.MAIN_METHOD_DECLARATION, this::visitMethodDeclaration);
+        addVisit(AstNode.INSTANCE_METHOD_DECLARATION, this::visitMethodDeclaration);
     }
 
     public Boolean visitProgram(JmmNode program, SymbolTableBuilder symbolTable) {

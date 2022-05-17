@@ -1,5 +1,6 @@
 package pt.up.fe.comp.analysis.table;
 import pt.up.fe.comp.analysis.JmmMethod;
+import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Type;
@@ -10,10 +11,10 @@ public class MethodCollector extends AJmmVisitor<Boolean, Boolean> {
     private JmmMethod method;
 
     public MethodCollector(JmmNode rootNode) {
-        addVisit("MainMethodDeclaration", this::visitMainMethodDeclaration);
-        addVisit("InstanceMethodDeclaration", this::visitMethodDeclaration);
-        addVisit("Parameter", this::visitParameter);
-        addVisit("VarDeclaration", this::visitLocalVariable);
+        addVisit(AstNode.MAIN_METHOD_DECLARATION, this::visitMainMethodDeclaration);
+        addVisit(AstNode.INSTANCE_METHOD_DECLARATION, this::visitMethodDeclaration);
+        addVisit(AstNode.PARAMETER, this::visitParameter);
+        addVisit(AstNode.VAR_DECLARATION, this::visitLocalVariable);
 
         visit(rootNode);
     }

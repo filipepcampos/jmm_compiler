@@ -1,4 +1,6 @@
 package pt.up.fe.comp.analysis.stages;
+import pt.up.fe.comp.ast.AstNode;
+import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
@@ -9,7 +11,7 @@ import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.report.Stage;
 import java.util.List;
 
-public class MethodImportCheckVisitor extends PreorderJmmVisitor<List<Report>, Boolean> {
+public class MethodImportCheckVisitor extends AJmmVisitor<List<Report>, Boolean> {
     String methodSignature;
     SymbolTable symbolTable;
     List<String> imports;
@@ -18,9 +20,9 @@ public class MethodImportCheckVisitor extends PreorderJmmVisitor<List<Report>, B
         this.symbolTable = symbolTable;
         this.methodSignature = methodSignature;
         this.imports = imports;
-        addVisit("Parameter", this::visitDeclaration);
-        addVisit("VarDeclaration", this::visitDeclaration);
-        addVisit("ClassMethod", this::visitClassMethod);
+        addVisit(AstNode.PARAMETER, this::visitDeclaration);
+        addVisit(AstNode.VAR_DECLARATION, this::visitDeclaration);
+        addVisit(AstNode.CLASS_METHOD, this::visitClassMethod);
         setDefaultVisit(this::defaultVisit);
     }
 
@@ -34,7 +36,8 @@ public class MethodImportCheckVisitor extends PreorderJmmVisitor<List<Report>, B
     private Boolean visitClassMethod(JmmNode node, List<Report> reports){
         String className = node.getJmmChild(0).get("name");
         
-        if(!(symbolTable.getImports().contains(className) || className.equals("this"))){
+        if(!(symbolTable.getImports().contains(className) || className.equals("this")
+                || className.equals(symbolTable.getClassName()) || className.equals(symbolTable.getSuper()))){
             for(Symbol s : symbolTable.getLocalVariables(methodSignature)){
                 if(s.getName().equals(className)){
                     return true;

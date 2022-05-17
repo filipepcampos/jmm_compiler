@@ -3,28 +3,30 @@ package pt.up.fe.comp;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import pt.up.fe.comp.analysis.JmmAnalyser;
+import pt.up.fe.comp.analysis.table.SymbolTableBuilder;
+import pt.up.fe.comp.analysis.table.SymbolTableCollector;
+import pt.up.fe.comp.jasmin.OllirToJasmin;
+import pt.up.fe.comp.jmm.jasmin.JasminResult;
+import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
+import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ast.JmmNode;
+import pt.up.fe.comp.ollir.JmmOptimizer;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
-import pt.up.fe.comp.OllirToJasmin;
-import pt.up.fe.comp.jmm.ollir.*;
-import pt.up.fe.comp.jmm.jasmin.*;
-
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class Launcher {
 
     public static void main(String[] args) {
-
-        /*
         SpecsSystem.programStandardInit();
 
         SpecsLogs.info("Executing with args: " + Arrays.toString(args));
@@ -51,7 +53,7 @@ public class Launcher {
         SimpleParser parser = new SimpleParser();
 
         // Parse stage
-        JmmParserResult parserResult = parser.parse(input, "Program", config);
+        JmmParserResult parserResult = parser.parse(input,  config);
 
         // Check if there are parsing errors
         parserResult.getReports().stream()
@@ -74,38 +76,33 @@ public class Launcher {
         // Analysis Stage
         JmmAnalyser analyser = new JmmAnalyser();
         JmmSemanticsResult analysisResult = analyser.semanticAnalysis(parserResult);
-        System.out.println(analysisResult.getSymbolTable().print());
-        TestUtils.noErrors(analysisResult);
+
+        // Check if there are semantic errors
+        var analysisErrors = analysisResult.getReports().stream()
+                .filter(report -> report.getType() == ReportType.ERROR).collect(Collectors.toList());
+        if(analysisErrors.size() > 0){
+            analysisErrors.stream().findFirst().ifPresent(report -> {
+                if (!report.getMessage().isEmpty()) {
+                    System.out.println("Error during semantic analysis at line " + report.getLine()
+                            + " and column " + report.getColumn() + ".");
+                    System.out.println(report.getMessage());
+                }
+            });
+            System.out.println("Program finished due to semantic error.");
+            return;
+        }
 
         // AST to OLLIR
         JmmOptimizer optimizer = new JmmOptimizer();
-        var ollirResult = optimizer.toOllir(analysisResult);
+        OllirResult ollirResult = optimizer.toOllir(analysisResult);
         //var optimizationResult = optimizer.optimize(analysisResult);
-    
         TestUtils.noErrors(ollirResult);
 
-        SymbolTableBuilder symbolTable = new SymbolTableBuilder();
-        SymbolTableCollector collector = new SymbolTableCollector();
-        collector.visit(rootNode, symbolTable);
-        System.out.println(symbolTable.print());
-        */
-
-        if (args.length != 1) {
-            throw new RuntimeException("Expected a single argument, a path to an existing input file.");
-        }
-        File inputFile = new File("./test/fixtures/public/" + args[0]);
-        if (!inputFile.isFile()) {
-            throw new RuntimeException("Expected a path to an existing input file.");
-        }
-        String content = SpecsIo.read(inputFile);
-        OllirResult ollirResult = new OllirResult(content, new HashMap<String, String>());
-
+        // OLLIR to Jasmin
         OllirToJasmin converter = new OllirToJasmin();
         JasminResult result = converter.toJasmin(ollirResult);
 
         result.compile();
         result.run();
-
-        // ... add remaining stages
     }
 }

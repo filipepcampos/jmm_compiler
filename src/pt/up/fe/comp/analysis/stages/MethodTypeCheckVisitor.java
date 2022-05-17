@@ -1,4 +1,6 @@
 package pt.up.fe.comp.analysis.stages;
+import pt.up.fe.comp.analysis.AnalysisUtils;
+import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Type;
@@ -32,22 +34,22 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         parametersAndFields.addAll(symbolTable.getParameters(methodSignature));
         parametersAndFields.addAll(symbolTable.getFields());
 
-        addVisit("IntLiteral", this::visitIntLiteral);
-        addVisit("Id", this::visitId);
-        addVisit("LengthOp", this::visitLengthOp);
-        addVisit("BinaryOp", this::visitBinaryOp);
-        addVisit("ClassMethod", this::visitClassMethod);
-        addVisit("Condition", this::visitCondition);
-        addVisit("Assignment", this::visitAssignment);
-        addVisit("ArrayAccess", this::visitArrayAccess);
-        addVisit("ArrayInitialization", this::visitArrayInitialization);
-        addVisit("ClassInitialization", this::visitClassInitialization);
-        addVisit("Bool", this::visitBool);
-        addVisit("UnaryOp", this::visitUnaryOp);
-        addVisit("ExpressionInParentheses", this::visitExpressionInParentheses);
-        addVisit("ArrayAssignment", this::visitArrayAssignment);
-        addVisit("Argument", this::visitArgument);
-        addVisit("ReturnExpression", this::visitReturnExpression);
+        addVisit(AstNode.INT_LITERAL, this::visitIntLiteral);
+        addVisit(AstNode.ID, this::visitId);
+        addVisit(AstNode.LENGTH_OP, this::visitLengthOp);
+        addVisit(AstNode.BINARY_OP, this::visitBinaryOp);
+        addVisit(AstNode.CLASS_METHOD, this::visitClassMethod);
+        addVisit(AstNode.CONDITION, this::visitCondition);
+        addVisit(AstNode.ASSIGNMENT, this::visitAssignment);
+        addVisit(AstNode.ARRAY_ACCESS, this::visitArrayAccess);
+        addVisit(AstNode.ARRAY_INITIALIZATION, this::visitArrayInitialization);
+        addVisit(AstNode.CLASS_INITIALIZATION, this::visitClassInitialization);
+        addVisit(AstNode.BOOL, this::visitBool);
+        addVisit(AstNode.UNARY_OP, this::visitUnaryOp);
+        addVisit(AstNode.EXPRESSION_IN_PARENTHESES, this::visitExpressionInParentheses);
+        addVisit(AstNode.ARRAY_ASSIGNMENT, this::visitArrayAssignment);
+        addVisit(AstNode.ARGUMENT, this::visitArgument);
+        addVisit(AstNode.RETURN_EXPRESSION, this::visitReturnExpression);
         setDefaultVisit(this::defaultVisit);
     }
 
@@ -102,7 +104,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         Symbol symbol = getSymbolByName(name, node, reports);
         if(symbol == null){
             reports.add(createSemanticError(node, "Symbol " + name + " is not defined." ));
-            return new JmmType("int", false); // TODO: Returning null crashes program before report is parsed
+            return new JmmType("", false);
         }
         return new JmmType(symbol.getType());
     }
@@ -112,16 +114,13 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         JmmType childType = visit(child, reports);
         if(!childType.isArray()){
             reports.add(createSemanticError(node, "Symbol doesn't support the .length op because it is not an array."));
-            //return new JmmType(null, false);  // TODO: Returning null crashes program before report is parsed
+            return new JmmType("", false);
         }
         return new JmmType("int", false);
     }
 
     private JmmType visitBinaryOp(JmmNode node, List<Report> reports){
         String op = node.get("op");
-        if(node.getNumChildren() != 2){
-            // TODO: Error?
-        }
         JmmType firstChildType = visit(node.getJmmChild(0), reports);
         JmmType secondChildType = visit(node.getJmmChild(1), reports);
 
@@ -155,62 +154,71 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
                     reports.add(createSemanticError(node, "Invalid type for " + op ));
                 }
         }
-        return new JmmType("int", false); // TODO:Returning null crashes program before report is parsed
+        return new JmmType("", false);
     }
 
     private JmmType visitClassMethod(JmmNode node, List<Report> reports){
         String methodName = node.get("name");
 
-        if(node.getNumChildren() != 2){
-            // TODO: Error?
-        }
-
-
         JmmNode classIdNode = node.getJmmChild(0);
         String className = classIdNode.get("name");
-        Symbol symbol = getSymbolByName(className);
 
         JmmNode argumentsNode = node.getJmmChild(1);
 
-        if(className.equals("this") || (symbol != null && symbol.getType().getName().equals(symbolTable.getClassName()))){
-            if(symbolTable.getMethods().contains(methodName)){
-                List<Symbol> methodParameters = symbolTable.getParameters(methodName);
+        boolean knownMethod = false;
+        if(className.equals("this") || className.equals(symbolTable.getClassName())){
+            if(methodSignature.equals("main")){
+                reports.add(createSemanticError(node, "Cannot invoke non-static method from a static context"));
+                return new JmmType("", false, false);
+            }
+            knownMethod = true;
+        } else {
+            Symbol symbol = getSymbolByName(className, node, reports);
+            if(symbol != null){
+                Type symbolType = symbol.getType();
+                String symbolTypeName = symbolType.getName();
+                if(symbolType.isArray()){
+                    reports.add(createSemanticError(node, "Method cannot be invoked because " + className + " is an array"));
+                    return new JmmType("", false, false);
+                } else if(symbolTypeName.equals(symbolTable.getClassName())) {
+                    knownMethod = true;
+                }
+            }
+        }
 
-                List<Report> methodCallReports = new ArrayList<>();
-                System.out.println("VISIT --- " + methodName + " -> " + methodParameters.size() + " vs " + argumentsNode.getNumChildren());
-                if(methodParameters.size() != argumentsNode.getNumChildren()){
+        if(knownMethod){ // Method// information is known because method is registered in the symbolTable
+            List<Report> methodCallReports = new ArrayList<>();
+            if(symbolTable.getMethods().contains(methodName)) {
+                List<Symbol> methodParameters = symbolTable.getParameters(methodName);
+                if (methodParameters.size() != argumentsNode.getNumChildren()) {
                     methodCallReports.add(createSemanticError(node, "Invalid number of arguments for method " + methodName + " expected " + methodParameters.size() + " arguments but got " + argumentsNode.getNumChildren() + " instead"));
                 } else {
-                    for(int i = 0; i < methodParameters.size(); ++i){
+                    for (int i = 0; i < methodParameters.size(); ++i) {
                         Type parameterType = methodParameters.get(i).getType();
                         JmmType argumentType = visit(argumentsNode.getJmmChild(i), reports);
-                        if(!argumentType.equals(parameterType)){
+                        if (!argumentType.equals(parameterType)) {
                             methodCallReports.add(createSemanticError(node, "Argument type doesn't match required parameter type for method " + methodName));
                         }
                     }
                 }
-                
-                if(symbolTable.getSuper() == null){
-                    reports.addAll(methodCallReports);    
+            } else {
+                methodCallReports.add(createSemanticError(node, "Method " + methodName + " does not exist."));
+            }
+
+            if(symbolTable.getSuper() == null){
+                if(methodCallReports.isEmpty()){
                     return new JmmType(symbolTable.getReturnType(methodName));
+                } else {
+                    reports.addAll(methodCallReports);
+                    return new JmmType(null, false, true);
                 }
-                return new JmmType(null, false, true);
             }
-            if(symbolTable.getSuper() != null){
-                return new JmmType(null, false, true);
-            }
-            reports.add(createSemanticError(node, "Method " + methodName + " does not exist."));
-        } else {
-            return new JmmType(null, false, true);
+            return new JmmType(null, false, true); // Assume the type is correct (method in super)
         }
-    
-        return new JmmType("int", false); // TODO: Returning null crashes program before report is parsed
+        return new JmmType(null, false, true); // Assume the type is correct
     }
 
     private JmmType visitCondition(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Error?
-        }
         JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(new JmmType("boolean", false))){
             reports.add(createSemanticError(node, "Condition is not a boolean"));
@@ -219,12 +227,10 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitAssignment(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Error?
-        }
         JmmType childType = visit(node.getJmmChild(0), reports);
         Symbol symbol = getSymbolByName(node.get("name"));
-        if(!childType.equals(symbol.getType())){
+
+        if(!AnalysisUtils.isAssignable(symbolTable, new JmmType(symbol.getType()), childType)){
             reports.add(createSemanticError(node, "Invalid assignment type for symbol " + symbol.getName()));
         }
 
@@ -233,10 +239,6 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitArrayAssignment(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 2){
-            // TODO: Error?
-        }
-
         JmmType indexType = visit(node.getJmmChild(0), reports);
         if(!indexType.equals(new JmmType("int", false))){
             reports.add(createSemanticError(node, "Invalid type for array index"));
@@ -257,12 +259,8 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitArrayAccess(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 2){
-            // TODO: Error?
-        }
-        
         String arrayName = node.getJmmChild(0).get("name");
-        Symbol arraySymbol = getSymbolByName(arrayName);
+        Symbol arraySymbol = getSymbolByName(arrayName, node, reports);
 
         if(arraySymbol == null){
             reports.add(createSemanticError(node, "Symbol " + arrayName + " not defined."));
@@ -280,9 +278,6 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitArrayInitialization(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error ?
-        }
         JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(new JmmType("int", false))){
             reports.add(createSemanticError(node, "Invalid type for array size"));
@@ -299,11 +294,8 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitUnaryOp(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error?
-        }
-        if(!node.get("op").equals("NEG")){
-            // TODO: Throw error
+        if(!node.get("op").equals("NEG")){ // Only NEG is supported by the jmm grammar
+            return new JmmType(null, false);
         }
         JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(new JmmType("boolean",false))){
@@ -313,28 +305,23 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     }
 
     private JmmType visitExpressionInParentheses(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error?
-        }
         return visit(node.getJmmChild(0), reports);
     }
 
     private JmmType visitArgument(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error?
-        }
         return visit(node.getJmmChild(0), reports);
     }
 
     private JmmType visitReturnExpression(JmmNode node, List<Report> reports){
-        if(node.getNumChildren() != 1){
-            // TODO: Throw error?
-        }
         JmmType childType = visit(node.getJmmChild(0), reports);
         if(!childType.equals(symbolTable.getReturnType(this.methodSignature))){
             reports.add(createSemanticError(node, "Incompatible return type"));
         }
         return new JmmType(null, false);
+    }
+
+    private boolean isClassOrSuper(String name){
+        return name.equals(symbolTable.getClassName()) || name.equals(symbolTable.getSuper());
     }
 
     private Report createSemanticError(JmmNode node, String message){

@@ -35,6 +35,8 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         addVisit(AstNode.CLASS_INITIALIZATION, this::visitClassInitialization);
         addVisit(AstNode.EXPRESSION_IN_PARENTHESES, this::visitExpressionInParentheses);
         addVisit(AstNode.IF_STATEMENT, this::visitIfStatement);
+        addVisit(AstNode.CONDITION, this::visitCondition);
+        addVisit(AstNode.STATEMENT_SCOPE, this::visitStatementScope);
 
         /*
         LENGTH_OP,
@@ -42,7 +44,6 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         ARRAY_ACCESS,
         ARRAY_INITIALIZATION,
         ARRAY_ASSIGNMENT
-        IF_STATEMENT,
         WHILE_STATEMENT,
         STATEMENT_SCOPE
         */
@@ -121,7 +122,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
                 opSymbol = "&&"; returnType = "bool"; operandType = "bool";
                 break;
             case "LOW":
-                opSymbol = "<"; returnType = "bool"; operandType = "i32";
+                opSymbol = "<"; returnType = "bool"; operandType = "bool"; // TODO: Change operand type to i32 but with <.bool
                 break;
             case "ADD":
                 opSymbol = "+"; returnType = "i32"; operandType = "i32";
@@ -315,9 +316,9 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         JmmNode ifNode = node.getJmmChild(1);
         JmmNode elseNode = node.getJmmChild(2);
 
-        OllirStatement conditionStatement = visit(conditionNode);
-        OllirStatement ifStatement = visit(ifNode);
-        OllirStatement elseStatement = visit(elseNode);
+        OllirStatement conditionStatement = visit(conditionNode, hint);
+        OllirStatement ifStatement = visit(ifNode, hint);
+        OllirStatement elseStatement = visit(elseNode, hint);
 
         code.append(conditionStatement.getCodeBefore())
             .append(String.format("if(%s) goto else%d;\n", conditionStatement.getResultVariable(), labelCounter));
@@ -326,6 +327,19 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         code.append(elseStatement.getCodeBefore()).append("\nendif").append(labelCounter).append(":\n");
 
         return new OllirStatement(code.toString(),"" );
+    }
+
+    private OllirStatement visitCondition(JmmNode node, OllirGeneratorHint hint){
+        return visit(node.getJmmChild(0), new OllirGeneratorHint(methodSignature, "bool", false));
+    }
+
+    private OllirStatement visitStatementScope(JmmNode node, OllirGeneratorHint hint){
+        StringBuilder code = new StringBuilder();
+        for(JmmNode child : node.getChildren()){
+            OllirStatement stmt = visit(child, hint);
+            code.append(stmt.getCodeBefore());
+        }
+        return new OllirStatement(code.toString(), "");
     }
  
     // Appends a new temporary assignment to the code StringBuilder and returns the variable name

@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.stream.Collectors;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 
@@ -18,7 +17,7 @@ public class JmmMethod {
         this.signature = signature;
         this.returnType = returnType;
         this.parameters = new ArrayList<>();
-        this.localVariables = new HashMap<Symbol, Boolean>();
+        this.localVariables = new HashMap<>();
     }
 
     public String getSignature(){
@@ -38,10 +37,10 @@ public class JmmMethod {
     }
 
     public List<Symbol> getLocalVariables(){
-        return new ArrayList<Symbol>(this.localVariables.keySet().stream().collect(Collectors.toList()));
+        return new ArrayList<>(new ArrayList<>(this.localVariables.keySet()));
     }
 
     public List<Symbol> getParameters(){
-        return new ArrayList<Symbol>(this.parameters);
+        return new ArrayList<>(this.parameters);
     }
 }

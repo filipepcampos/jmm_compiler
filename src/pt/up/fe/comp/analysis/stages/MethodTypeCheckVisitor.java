@@ -78,6 +78,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         return null;
     }
 
+    // Same as getSymbolByName(String) but adds error reports if variable was not initialized
     private Symbol getSymbolByName(String name, JmmNode node, List<Report> reports){
         for(Symbol s : this.localVariables.keySet()){
             if(name.equals(s.getName())){
@@ -94,10 +95,12 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         }
         return null;
     }
+
     private JmmType visitId(JmmNode node, List<Report> reports){
         String name = node.get("name");
         
         if(node.getJmmParent().getKind().equals("ClassMethod")){
+            // If the node's parent is ClassMethod then id doesn't represent a variable name
             return new JmmType(null, false);
         }
 
@@ -126,8 +129,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
 
         JmmType boolType = new JmmType("boolean", false);
         JmmType intType = new JmmType("int",false);
-        
-        // AND,LOW,ADD,SUB,MUL,DIV
+
         switch(op){
             case "AND":
                 if(firstChildType.equals(boolType) && secondChildType.equals(boolType)){
@@ -186,7 +188,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
             }
         }
 
-        if(knownMethod){ // Method// information is known because method is registered in the symbolTable
+        if(knownMethod){ // Method information is known because method is registered in the symbolTable
             List<Report> methodCallReports = new ArrayList<>();
             if(symbolTable.getMethods().contains(methodName)) {
                 List<Symbol> methodParameters = symbolTable.getParameters(methodName);
@@ -205,12 +207,12 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
                 methodCallReports.add(createSemanticError(node, "Method " + methodName + " does not exist."));
             }
 
-            if(symbolTable.getSuper() == null){
-                if(methodCallReports.isEmpty()){
+            if(symbolTable.getSuper() == null){ // Class doesn't extend another class
+                if(methodCallReports.isEmpty()){ // There's been no errors detected
                     return new JmmType(symbolTable.getReturnType(methodName));
                 } else {
                     reports.addAll(methodCallReports);
-                    return new JmmType(null, false, true);
+                    return new JmmType("", false, false);
                 }
             }
             return new JmmType(null, false, true); // Assume the type is correct (method in super)
@@ -229,12 +231,16 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
     private JmmType visitAssignment(JmmNode node, List<Report> reports){
         JmmType childType = visit(node.getJmmChild(0), reports);
         Symbol symbol = getSymbolByName(node.get("name"));
+        if(symbol == null){
+            reports.add(createSemanticError(node, "Symbol " + node.get("name") + " hasn't been declared."));
+            return new JmmType(null, false);
+        }
 
         if(!AnalysisUtils.isAssignable(symbolTable, new JmmType(symbol.getType()), childType)){
             reports.add(createSemanticError(node, "Invalid assignment type for symbol " + symbol.getName()));
         }
 
-        this.localVariables.computeIfPresent(symbol, (k, v) -> true);
+        this.localVariables.computeIfPresent(symbol, (k, v) -> true); // Set variable as initialized in hashmap
         return new JmmType(null, false);
     }
 
@@ -245,6 +251,10 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
         }
 
         Symbol symbol = getSymbolByName(node.get("name"));
+        if(symbol == null){
+            reports.add(createSemanticError(node, "Symbol " + node.get("name") + " hasn't been declared."));
+            return new JmmType(null, false);
+        }
         Type symbolType = symbol.getType();
         JmmType assignType = visit(node.getJmmChild(1), reports);
 
@@ -264,6 +274,7 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
 
         if(arraySymbol == null){
             reports.add(createSemanticError(node, "Symbol " + arrayName + " not defined."));
+            return new JmmType("", false);
         }
 
         JmmType type = new JmmType(arraySymbol.getType());
@@ -318,10 +329,6 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
             reports.add(createSemanticError(node, "Incompatible return type"));
         }
         return new JmmType(null, false);
-    }
-
-    private boolean isClassOrSuper(String name){
-        return name.equals(symbolTable.getClassName()) || name.equals(symbolTable.getSuper());
     }
 
     private Report createSemanticError(JmmNode node, String message){

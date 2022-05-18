@@ -29,7 +29,8 @@ public enum AstNode {
     IMPORT_DECL,
     STATEMENT_EXPRESSION,
     IF_STATEMENT,
-    WHILE_STATEMENT, STATEMENT_SCOPE;
+    WHILE_STATEMENT,
+    STATEMENT_SCOPE;
 
     private final String name;
 

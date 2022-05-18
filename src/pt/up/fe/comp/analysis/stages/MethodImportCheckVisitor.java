@@ -1,11 +1,9 @@
 package pt.up.fe.comp.analysis.stages;
 import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
-import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
-import pt.up.fe.comp.analysis.JmmType;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.report.Stage;
@@ -34,35 +32,36 @@ public class MethodImportCheckVisitor extends AJmmVisitor<List<Report>, Boolean>
     }
 
     private Boolean visitClassMethod(JmmNode node, List<Report> reports){
-        String className = node.getJmmChild(0).get("name");
+        String name = node.getJmmChild(0).get("name");
         
-        if(!(symbolTable.getImports().contains(className) || className.equals("this")
-                || className.equals(symbolTable.getClassName()) || className.equals(symbolTable.getSuper()))){
+        if(!(symbolTable.getImports().contains(name) || name.equals("this")
+                || name.equals(symbolTable.getClassName()) || name.equals(symbolTable.getSuper()))){
+            // Not static call, name refers to a variable
             for(Symbol s : symbolTable.getLocalVariables(methodSignature)){
-                if(s.getName().equals(className)){
+                if(s.getName().equals(name)){
                     return true;
                 }
             }
             for(Symbol s : symbolTable.getParameters(methodSignature)){
-                if(s.getName().equals(className)){
+                if(s.getName().equals(name)){
                     return true;
                 }
             }
             for(Symbol s : symbolTable.getFields()){
-                if(s.getName().equals(className)){
+                if(s.getName().equals(name)){
                     return true;
                 }
             }
             reports.add(new Report(ReportType.ERROR, Stage.SEMANTIC,
                 Integer.parseInt(node.get("line")), Integer.parseInt(node.get("col")),
-                "Class " + className + " has not been imported."));
+                "Class " + name + " has not been imported."));
         }
         return true;
     }
 
     private Boolean visitDeclaration(JmmNode node, List<Report> reports){
         String type = node.get("type");
-        Boolean isArray = type.endsWith("[]");
+        boolean isArray = type.endsWith("[]");
         if (isArray) {
             type = type.substring(0, type.length() - 2);
         }

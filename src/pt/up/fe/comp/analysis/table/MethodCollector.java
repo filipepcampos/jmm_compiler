@@ -34,7 +34,7 @@ public class MethodCollector extends AJmmVisitor<Boolean, Boolean> {
     private Boolean visitMethodDeclaration(JmmNode methodDeclaration, Boolean dummy) {
         String signature = methodDeclaration.get("name");
         String typeName = methodDeclaration.get("type");
-        Boolean isArray = typeName.endsWith("[]");
+        boolean isArray = typeName.endsWith("[]");
         if (isArray) {
             typeName = typeName.substring(0, typeName.length() - 2);
         }
@@ -48,7 +48,7 @@ public class MethodCollector extends AJmmVisitor<Boolean, Boolean> {
     
     private Symbol varDeclarationToSymbol(JmmNode varDeclaration){
         String type = varDeclaration.get("type");
-        Boolean isArray = type.endsWith("[]");
+        boolean isArray = type.endsWith("[]");
         if (isArray) {
             type = type.substring(0, type.length() - 2);
         }

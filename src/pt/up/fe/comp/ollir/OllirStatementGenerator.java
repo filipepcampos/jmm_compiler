@@ -6,7 +6,6 @@ import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
-import pt.up.fe.comp.ollir.OllirStatement;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -51,9 +50,6 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
     private OllirStatement defaultVisit(JmmNode node, OllirGeneratorHint hint){
         for(var child : node.getChildren()){
-            if(hint == null){ // Avoid null hints if node hasn't been implemented yet
-                hint = new OllirGeneratorHint("", "", true);
-            }
             visit(child, hint);
         }
         return new OllirStatement("", "");
@@ -92,13 +88,13 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         int value = 0;
         switch(type){
             case "decimal": value = Integer.parseInt(stringValue);
-            break;
+                break;
             case "binary": value = Integer.parseInt(stringValue, 2);
-            break;
+                break;
             case "octal": value = Integer.parseInt(stringValue, 8);
-            break;
+                break;
             case "hexadecimal": value = Integer.parseInt(stringValue, 16);
-            break;
+                break;
         }
         return new OllirStatement("", String.valueOf(value) + ".i32");
     }
@@ -119,22 +115,22 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         String opSymbol = "";
         switch(op){
             case "AND":
-                opSymbol = "&&"; returnType = "bool"; operandType = "bool";
+                opSymbol = "&&.bool"; returnType = "bool"; operandType = "bool";
                 break;
             case "LOW":
-                opSymbol = "<"; returnType = "bool"; operandType = "bool"; // TODO: Change operand type to i32 but with <.bool
+                opSymbol = "<.bool"; returnType = "bool"; operandType = "i32";
                 break;
             case "ADD":
-                opSymbol = "+"; returnType = "i32"; operandType = "i32";
+                opSymbol = "+.i32"; returnType = "i32"; operandType = "i32";
                 break;
             case "SUB":
-                opSymbol = "-"; returnType = "i32"; operandType = "i32";
+                opSymbol = "-.i32"; returnType = "i32"; operandType = "i32";
                 break;
             case "MUL":
-                opSymbol = "*"; returnType = "i32"; operandType = "i32";
+                opSymbol = "*.i32"; returnType = "i32"; operandType = "i32";
                 break;
             case "DIV": 
-                opSymbol = "/"; returnType = "i32"; operandType = "i32";
+                opSymbol = "/.i32"; returnType = "i32"; operandType = "i32";
                 break;
         }
 
@@ -144,7 +140,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         code.append(stmt1.getCodeBefore());
         code.append(stmt2.getCodeBefore());
 
-        String rhs = String.format("%s %s.%s %s", stmt1.getResultVariable(), opSymbol, operandType,stmt2.getResultVariable());
+        String rhs = String.format("%s %s %s", stmt1.getResultVariable(), opSymbol, stmt2.getResultVariable());
         if(hint.needsTemporaryVar()) {
             String temporaryVariable = assignTemporary(returnType, rhs, code);
             return new OllirStatement(code.toString(), temporaryVariable);
@@ -157,7 +153,6 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
         String op = node.get("op");
         if(!op.equals("NEG")){
-            // TODO: Throw error
         }
         return new OllirStatement(code.toString(), "");
     }
@@ -263,7 +258,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         StringBuilder code = new StringBuilder();
         StringBuilder argumentList = new StringBuilder();
 
-        Boolean parametersAreAvailable = false;
+        boolean parametersAreAvailable = false;
         List<Symbol> parameters;
         if(symbolTable.getMethods().contains(hint.getMethodSignature())){
             parameters = symbolTable.getParameters(hint.getMethodSignature());

@@ -21,7 +21,6 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
         addVisit(AstNode.CLASS_DECLARATION, this::visitClassDecl);
         addVisit(AstNode.MAIN_METHOD_DECLARATION, this::visitMainMethodDecl);
         addVisit(AstNode.INSTANCE_METHOD_DECLARATION, this::visitInstanceMethodDecl);
-        addVisit(AstNode.STATEMENT_EXPRESSION, this::visitStatementExpression);
     }
 
     public String getCode(){
@@ -78,7 +77,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
 
         List<Symbol> params = symbolTable.getParameters(methodSignature);
         String paramCode = params.stream()
-                .map(symbol -> OllirUtils.getCode(symbol))
+                .map(OllirUtils::getCode)
                 .collect(Collectors.joining(", "));
 
         code.append(paramCode).append(").");
@@ -106,9 +105,5 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
             OllirStatement ollirStatement = stmtGenerator.visit(stmt, new OllirGeneratorHint(methodSignature, ollirReturnType, false));
             code.append(ollirStatement.getCodeBefore());
         }
-    }
-
-    private Integer visitStatementExpression(JmmNode node, Boolean dummy) {
-        return 0;
     }
 }

@@ -1,7 +1,6 @@
 package pt.up.fe.comp.analysis;
 
 import pt.up.fe.comp.jmm.analysis.table.Type;
-import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 
 public class AnalysisUtils {
@@ -10,10 +9,7 @@ public class AnalysisUtils {
         if(typeName.equals(table.getClassName()) || typeName.equals(table.getSuper())){
             return true;
         }
-        if(typeName.equals("int") || typeName.equals("boolean") || typeName.equals("String")){
-            return true;
-        }
-        return false;
+        return typeName.equals("int") || typeName.equals("boolean") || typeName.equals("String");
     }
 
     public static boolean isAssignable(SymbolTable table, JmmType lhs, JmmType rhs){

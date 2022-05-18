@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class SymbolTableBuilder implements SymbolTable {
     List<String> importList;
@@ -57,7 +56,7 @@ public class SymbolTableBuilder implements SymbolTable {
     }
 
     public List<String> getMethods(){
-        return new ArrayList<String>(this.methods.keySet().stream().collect(Collectors.toList()));
+        return new ArrayList<>(new ArrayList<>(this.methods.keySet()));
     }
 
     public void addMethod(JmmMethod method) {

@@ -199,7 +199,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         String idName = idNode.get("name");
 
         // Arguments Node
-        OllirStatement argumentStmt = visit(node.getJmmChild(1), new OllirGeneratorHint(idName));
+        OllirStatement argumentStmt = visit(node.getJmmChild(1), new OllirGeneratorHint(methodName, idName, false));
         code.append(argumentStmt.getCodeBefore());
 
         StringBuilder methodCallCode = new StringBuilder();
@@ -262,13 +262,28 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
         Boolean parametersAreAvailable = false;
         List<Symbol> parameters;
-        if(symbolTable.getMethods().contains(hint.getMethodSignature())){
+
+        System.out.println(hint.getMethodSignature() + " - - - " + hint.getExpectedType());
+
+        // visitClassMethod puts idName in the expectedType parameter
+        if(symbolTable.getMethods().contains(hint.getMethodSignature())
+        && hint.getExpectedType().equals("this")){
             parameters = symbolTable.getParameters(hint.getMethodSignature());
             parametersAreAvailable = true;
         } else {
-            parameters = new ArrayList<>();
+            Symbol s = findSymbol(hint.getExpectedType()); // Caller can use methodsignature parameters as variable name
+            if(s != null){
+                if(s.getType().equals(new Type(symbolTable.getClassName(), false))){
+                    parametersAreAvailable = true;
+                    parameters = symbolTable.getParameters(hint.getMethodSignature());
+                } else {
+                    parameters = new ArrayList<>();
+                }
+            } else {
+                parameters = new ArrayList<>();
+            }
         }
-
+        
         for(int i = 0; i < node.getNumChildren(); ++i){
             OllirStatement childStmt;
             if(parametersAreAvailable){

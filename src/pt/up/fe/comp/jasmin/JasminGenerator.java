@@ -1,7 +1,6 @@
 package pt.up.fe.comp.jasmin;
 
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
-import pt.up.fe.specs.util.exceptions.NotImplementedException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -21,11 +20,13 @@ public class JasminGenerator {
     }
 
     public JasminResult convert() {
+
         StringBuilder result = new StringBuilder();
+
         result.append(this.convertClass());
         result.append(this.convertMethods());
 
-        System.out.println(result);     // DEBUG
+        //System.out.println(result);     // DEBUG
         
         return new JasminResult(result.toString());
     }
@@ -80,6 +81,7 @@ public class JasminGenerator {
     }
 
     private String convertFields() {
+
         StringBuilder result = new StringBuilder();
 
         for (Field field : this.classUnit.getFields()) {
@@ -98,11 +100,7 @@ public class JasminGenerator {
 
         result.append(".field ");
         String modifier = field.getFieldAccessModifier().name().toLowerCase();
-        if (modifier.equals("default")) {    // TODO: Doubt
-            result.append("private ");
-        } else {
-            result.append(modifier).append(" ");
-        }
+        result.append(modifier.equals("default") ? "private" : modifier).append(" ");
         result.append(field.getFieldName()).append(" ");
         result.append(this.getJasminType(field.getFieldType())).append("\n");
 
@@ -176,11 +174,13 @@ public class JasminGenerator {
             result.append("static ");
         }
 
-        if (method.isConstructMethod()) {
+        /* if (method.isConstructMethod()) {
             result.append("<init>");    // TODO: Doubt
         } else {
             result.append(method.getMethodName());
-        }
+        } */
+
+        result.append(method.getMethodName());
 
         result.append("(");
         for (Element param : method.getParams()) {
@@ -203,6 +203,7 @@ public class JasminGenerator {
     }
 
     public String getFullyQualifiedName(String className) {
+
         if (className.equals(this.classUnit.getClassName())) {
             return this.classUnit.getClassName();
         }
@@ -213,7 +214,7 @@ public class JasminGenerator {
             }
         }
 
-        throw new RuntimeException("Could not find import for class " + className);
+        throw new RuntimeException("getFullyQualifiedName: Could not find import for class " + className);
     }
 
     private String getJasminType(Type type) {
@@ -242,15 +243,20 @@ public class JasminGenerator {
             case OBJECTREF:
                 result.append("L").append(this.getFullyQualifiedName(((ClassType) type).getName())).append(";");
                 break;
-            default:
-                throw new RuntimeException("Unrecognized type " + type);
+            case ARRAYREF:
+            case CLASS:
+            case THIS:
+                throw new RuntimeException("getJasminType: Unrecognized " + elementType + " element type");
         }
 
         return result.toString();
     }
 
     private String getElementClass(Element element) {
-        switch (element.getType().getTypeOfElement()) {
+
+        ElementType type = element.getType().getTypeOfElement();
+
+        switch (type) {
             case THIS:
                 return this.classUnit.getClassName();
             case OBJECTREF:
@@ -258,13 +264,13 @@ public class JasminGenerator {
             case CLASS:
                 return ((Operand) element).getName();
             default:
-                throw new RuntimeException("Unrecognized element type " + element.getType());
+                throw new RuntimeException("getElementClass: Unrecognized " + type + " element type");
         }
     }
 
     private String getCode(Instruction instruction, HashMap<String, Descriptor> varTable, List<String> labels) {
 
-        System.out.println(instruction.getInstType());  // DEBUG
+        //System.out.println(instruction.getInstType());  // DEBUG
 
         StringBuilder result = new StringBuilder();
 
@@ -298,23 +304,23 @@ public class JasminGenerator {
                 break;
             case UNARYOPER:
                 result.append(this.getCode((UnaryOpInstruction) instruction, varTable));
+                break;
             case BINARYOPER:
                 result.append(this.getCode((BinaryOpInstruction) instruction, varTable));
                 break;
             case NOPER:
                 result.append(this.getCode((SingleOpInstruction) instruction, varTable));
                 break;
-            default:
-                throw new RuntimeException("Unrecognized instruction " + instruction.getInstType());
         }
 
         return result.toString();
     }
 
     private String getCode(AssignInstruction instruction, HashMap<String, Descriptor> varTable) {
-        StringBuilder result = new StringBuilder();
-        Operand operand = (Operand) instruction.getDest();
 
+        StringBuilder result = new StringBuilder();
+
+        Operand operand = (Operand) instruction.getDest();
         if (operand instanceof ArrayOperand) {
             result.append("\taload ").append(varTable.get(operand.getName()).getVirtualReg()).append("\n");
             result.append(this.loadElement(((ArrayOperand) operand).getIndexOperands().get(0), varTable));  // TODO: Support for multiple dimensional arrays
@@ -330,21 +336,28 @@ public class JasminGenerator {
     }
 
     private String getCode(CallInstruction method, HashMap<String, Descriptor> varTable) {
+
+        StringBuilder result = new StringBuilder();
+
         switch (method.getInvocationType()) {
             case invokevirtual:
             case invokeinterface:
             case invokestatic:
             case invokespecial:
-                return this.getInvokeCode(method, varTable);
+                result.append(this.getInvokeCode(method, varTable));
+                break;
             case NEW:
-                return this.getNewCode(method, varTable);
+                result.append(this.getNewCode(method, varTable));
+                break;
             case arraylength:
-                return this.loadElement(method.getFirstArg(), varTable) + "\tarraylength\n";
+                result.append(this.loadElement(method.getFirstArg(), varTable)).append("\tarraylength\n");
+                break;
             case ldc:
-                return this.loadElement(method.getFirstArg(), varTable);
-            default:
-                throw new RuntimeException("Unrecognized call instruction " + method.getInvocationType());
+                result.append(this.loadElement(method.getFirstArg(), varTable));
+                break;
         }
+
+        return result.toString();
     }
 
     private String getCode(GotoInstruction instruction, HashMap<String, Descriptor> varTable) {
@@ -352,6 +365,7 @@ public class JasminGenerator {
     }
 
     private String getCode(CondBranchInstruction instruction, HashMap<String, Descriptor> varTable) {
+
         StringBuilder result = new StringBuilder();
 
         result.append(this.getCode(instruction.getCondition(), varTable, null));
@@ -361,11 +375,14 @@ public class JasminGenerator {
     }
 
     private String getCode(ReturnInstruction instruction, HashMap<String, Descriptor> varTable) {
+
         if (!instruction.hasReturnValue()) {
             return "\treturn\n";
         }
 
-        switch (instruction.getOperand().getType().getTypeOfElement()) {
+        ElementType type = instruction.getOperand().getType().getTypeOfElement();
+
+        switch (type) {
             case VOID:
                 return "\treturn\n";
             case INT32:
@@ -375,7 +392,7 @@ public class JasminGenerator {
             case OBJECTREF:
                 return this.loadElement(instruction.getOperand(), varTable) + "\tareturn\n";
             default:
-                throw new RuntimeException("Unrecognized return instruction for " + instruction.getOperand().getType());
+                throw new RuntimeException("getCode: Unrecognized return instruction for " + type + " element type");
         }
     }
 
@@ -423,7 +440,9 @@ public class JasminGenerator {
         result.append(this.loadElement(instruction.getLeftOperand(), varTable));
         result.append(this.loadElement(instruction.getRightOperand(), varTable));
 
-        switch (instruction.getOperation().getOpType()) {
+        OperationType opType = instruction.getOperation().getOpType();
+
+        switch (opType) {
             case ADD:
                 result.append("\tiadd\n");
                 break;
@@ -437,7 +456,7 @@ public class JasminGenerator {
                 result.append("\tidiv\n");
                 break;
             case LTH:
-                result.append("\tif_icmpgt ").append(this.getCondTrueLabel()).append("\n");     // Operands are switched
+                result.append("\tif_icmplt ").append(this.getCondTrueLabel()).append("\n");
                 result.append("\ticonst_0\n");
                 result.append("\tgoto ").append(this.getCondFalseLabel()).append("\n");
                 result.append(this.getCondTrueLabel()).append(":\n");
@@ -452,7 +471,7 @@ public class JasminGenerator {
                 result.append("\tineg\n");
                 break;
             default:
-                throw new RuntimeException("Unrecognized binary operation " + instruction.getOperation());
+                throw new RuntimeException("getCode: Unrecognized binary operation for " + opType + " operation type");
         }
 
         return result.toString();
@@ -471,6 +490,7 @@ public class JasminGenerator {
     }
 
     private String storeElement(Operand operand, HashMap<String, Descriptor> varTable) {
+
         if (operand instanceof ArrayOperand) {
             return "\tiastore\n";
         }
@@ -484,42 +504,45 @@ public class JasminGenerator {
             case ARRAYREF:
                 return "\tastore " + varTable.get(operand.getName()).getVirtualReg() + "\n";
             default:
-                throw new RuntimeException("Unrecognized operand type " + operand.getType());
+                throw new RuntimeException("storeElement: Unrecognized operand type " + operand.getType());
         }
     }
 
     private String loadElement(Element element, HashMap<String, Descriptor> varTable) {
+
+        StringBuilder result = new StringBuilder();
+
         if (element instanceof LiteralElement) {
-            return "\tldc " + ((LiteralElement) element).getLiteral() + "\n";
+            result.append("\tldc ").append(((LiteralElement) element).getLiteral()).append("\n");
         } else if (element instanceof ArrayOperand) {
             ArrayOperand arrayOperand = (ArrayOperand) element;
-            StringBuilder result = new StringBuilder();
-
             result.append("\taload ").append(varTable.get(arrayOperand.getName()).getVirtualReg()).append("\n");
             result.append(this.loadElement(arrayOperand.getIndexOperands().get(0), varTable)); // TODO: Support for multiple dimensional arrays
             result.append("\tiaload\n");
-
-            return result.toString();
         } else if (element instanceof Operand) {
             Operand operand = (Operand) element;
-            switch (operand.getType().getTypeOfElement()) {
+            ElementType type = operand.getType().getTypeOfElement();
+            switch (type) {
                 case THIS:
-                    return "\taload_0\n";
+                    result.append("\taload_0\n");
+                    break;
                 case INT32:
                 case BOOLEAN:
-                    return "\tiload "  + varTable.get(operand.getName()).getVirtualReg() + "\n";
+                    result.append("\tiload ").append(varTable.get(operand.getName()).getVirtualReg()).append("\n");
+                    break;
                 case OBJECTREF:
                 case ARRAYREF:
                 case STRING:
-                    return "\taload "  + varTable.get(operand.getName()).getVirtualReg() + "\n";
-                case CLASS:
-                    return "";
-                default:
-                    throw new RuntimeException("Unrecognized operand type " + operand.getType());
+                    result.append("\taload ").append(varTable.get(operand.getName()).getVirtualReg()).append("\n");
+                    break;
+                case CLASS:     // this happens in invokestatic
+                    break;
+                case VOID:
+                    throw new RuntimeException("loadElement: Unrecognized load instruction for " + type + " element type");
             }
         }
-
-        throw new RuntimeException("Unrecognized Element instance " + element.getClass());
+        
+        return result.toString();
     }
 
     private String getInvokeCode(CallInstruction method, HashMap<String, Descriptor> varTable) {
@@ -566,20 +589,27 @@ public class JasminGenerator {
     }
 
     private String getNewCode(CallInstruction instruction, HashMap<String, Descriptor> varTable) {
-        switch (instruction.getFirstArg().getType().getTypeOfElement()) {
+
+        StringBuilder result = new StringBuilder();
+
+        ElementType type = instruction.getFirstArg().getType().getTypeOfElement();
+
+        switch (type) {
             case ARRAYREF:
-                StringBuilder result = new StringBuilder();
                 int size = 0;
                 for (Element element : instruction.getListOfOperands()) {
                     result.append(this.loadElement(element, varTable));
                     size++;
                 }
                 result.append("\tmultianewarray ").append(this.getJasminType(instruction.getReturnType())).append(" ").append(size).append("\n");
-                return result.toString();
+                break;
             case OBJECTREF:
-                return "\tnew " + ((Operand) instruction.getFirstArg()).getName() + "\n";
+                result.append("\tnew ").append(((Operand) instruction.getFirstArg()).getName()).append("\n");
+                break;
             default:
-                throw new RuntimeException("Unrecognized new instruction for " + instruction.getFirstArg().getType());
+                throw new RuntimeException("getNewCode: Unrecognized new instruction for " + type + " element type");
         }
+
+        return result.toString();
     }
 }

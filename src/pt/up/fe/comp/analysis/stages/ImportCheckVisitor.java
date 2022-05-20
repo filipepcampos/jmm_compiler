@@ -1,8 +1,6 @@
 package pt.up.fe.comp.analysis.stages;
 import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
-import pt.up.fe.comp.jmm.analysis.table.Symbol;
-import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.report.Report;
@@ -14,7 +12,7 @@ import java.util.Optional;
 
 public class ImportCheckVisitor extends AJmmVisitor<List<Report>, Boolean> {
     SymbolTable symbolTable;
-    List<String> imports;
+    List<String> imports; // List of imported classes names (not fully qualified name)
 
     public ImportCheckVisitor(SymbolTable symbolTable) { 
         this.symbolTable = symbolTable;
@@ -53,7 +51,7 @@ public class ImportCheckVisitor extends AJmmVisitor<List<Report>, Boolean> {
 
     private Boolean visitVarDeclaration(JmmNode node, List<Report> reports){
         String type = node.get("type");
-        Boolean isArray = type.endsWith("[]");
+        boolean isArray = type.endsWith("[]");
         if (isArray) {
             type = type.substring(0, type.length() - 2);
         }

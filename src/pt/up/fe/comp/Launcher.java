@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.javacc.parser.ParseException;
+
 import pt.up.fe.comp.analysis.JmmAnalyser;
 import pt.up.fe.comp.analysis.table.SymbolTableBuilder;
 import pt.up.fe.comp.analysis.table.SymbolTableCollector;
@@ -95,6 +97,10 @@ public class Launcher {
         // AST to OLLIR
         JmmOptimizer optimizer = new JmmOptimizer();
         OllirResult ollirResult = optimizer.toOllir(analysisResult);
+        if(ollirResult == null){
+            System.out.println("Program finished due to error in conversion to ollir.");
+            return;
+        }
         //var optimizationResult = optimizer.optimize(analysisResult);
         TestUtils.noErrors(ollirResult);
 

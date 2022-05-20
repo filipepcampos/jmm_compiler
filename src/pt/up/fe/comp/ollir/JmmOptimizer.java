@@ -3,20 +3,45 @@ package pt.up.fe.comp.ollir;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
+import pt.up.fe.comp.jmm.report.Report;
+import pt.up.fe.comp.jmm.report.ReportType;
+import pt.up.fe.comp.jmm.report.Stage;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 public class JmmOptimizer implements JmmOptimization {
     @Override
     public OllirResult toOllir(JmmSemanticsResult semanticsResult) {
         OllirGenerator ollirGenerator = new OllirGenerator(semanticsResult.getSymbolTable());
-        ollirGenerator.visit(semanticsResult.getRootNode());
+        try {
+            ollirGenerator.visit(semanticsResult.getRootNode());
+        } catch(Exception e){
+            // Might occur due to unsupported features like method overloading
+            List<Report> reports = new ArrayList<>();
+            reports.add(new Report(ReportType.ERROR, Stage.LLIR, -1, "OLLIR parse exception occurred."));
+            // OllirResult cannot be created with invalid ollir code
+            return null; 
+
+        }
         String ollirCode = ollirGenerator.getCode();
 
         System.out.println("OLLIR code:\n");
         printOllirCode(ollirCode);
 
-        return new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
+        OllirResult result;
+        try {
+            result = new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
+        } catch(Exception e){
+            List<Report> reports = new ArrayList<>();
+            reports.add(new Report(ReportType.ERROR, Stage.LLIR, -1, "OLLIR parse exception occurred."));
+            // Code may use a feature that's not been implemented yet and doesn't generate correct ollirCode for it
+            // TODO: Remove in the end of the project
+            result = null;
+        }
+
+        return result;
     }
 
     // Prints ollircode with indentation

@@ -1,7 +1,6 @@
 package pt.up.fe.comp.analysis.stages;
 import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
-import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.report.Report;

@@ -38,7 +38,7 @@ public class SymbolTableCollector extends AJmmVisitor<SymbolTableBuilder, Boolea
     private Boolean visitClassDeclaration(JmmNode classDeclaration, SymbolTableBuilder symbolTable) {
         symbolTable.setClassName(classDeclaration.get("className"));
         Optional<String> baseClassName = classDeclaration.getOptional("baseClassName");
-        baseClassName.ifPresent(name -> symbolTable.setSuperName(name));
+        baseClassName.ifPresent(symbolTable::setSuperName);
 
         for (var child : classDeclaration.getChildren()) {
             visit(child, symbolTable);
@@ -49,7 +49,7 @@ public class SymbolTableCollector extends AJmmVisitor<SymbolTableBuilder, Boolea
 
     private Boolean visitVarDeclaration(JmmNode varDeclaration, SymbolTableBuilder symbolTable){
         String type = varDeclaration.get("type");
-        Boolean isArray = type.endsWith("[]");
+        boolean isArray = type.endsWith("[]");
         if (isArray) {
             type = type.substring(0, type.length() - 2);
         }

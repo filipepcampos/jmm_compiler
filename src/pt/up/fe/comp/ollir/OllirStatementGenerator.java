@@ -6,7 +6,6 @@ import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
-import pt.up.fe.comp.ollir.OllirStatement;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -15,6 +14,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
     SymbolTable symbolTable;
     String methodSignature;
     Integer temporaryVariableCounter = 0;
+    Integer labelCounter = 0;
 
     public OllirStatementGenerator(SymbolTable symbolTable, String methodSignature){
         this.symbolTable = symbolTable;
@@ -33,6 +33,9 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         addVisit(AstNode.STATEMENT_EXPRESSION, this::visitStatementExpression);
         addVisit(AstNode.CLASS_INITIALIZATION, this::visitClassInitialization);
         addVisit(AstNode.EXPRESSION_IN_PARENTHESES, this::visitExpressionInParentheses);
+        addVisit(AstNode.IF_STATEMENT, this::visitIfStatement);
+        addVisit(AstNode.CONDITION, this::visitCondition);
+        addVisit(AstNode.STATEMENT_SCOPE, this::visitStatementScope);
 
         /*
         LENGTH_OP,
@@ -40,7 +43,6 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         ARRAY_ACCESS,
         ARRAY_INITIALIZATION,
         ARRAY_ASSIGNMENT
-        IF_STATEMENT,
         WHILE_STATEMENT,
         STATEMENT_SCOPE
         */
@@ -48,9 +50,6 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
     private OllirStatement defaultVisit(JmmNode node, OllirGeneratorHint hint){
         for(var child : node.getChildren()){
-            if(hint == null){ // Avoid null hints if node hasn't been implemented yet
-                hint = new OllirGeneratorHint("", "", true);
-            }
             visit(child, hint);
         }
         return new OllirStatement("", "");
@@ -89,13 +88,13 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         int value = 0;
         switch(type){
             case "decimal": value = Integer.parseInt(stringValue);
-            break;
+                break;
             case "binary": value = Integer.parseInt(stringValue, 2);
-            break;
+                break;
             case "octal": value = Integer.parseInt(stringValue, 8);
-            break;
+                break;
             case "hexadecimal": value = Integer.parseInt(stringValue, 16);
-            break;
+                break;
         }
         return new OllirStatement("", String.valueOf(value) + ".i32");
     }
@@ -116,22 +115,22 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         String opSymbol = "";
         switch(op){
             case "AND":
-                opSymbol = "&&"; returnType = "bool"; operandType = "bool";
+                opSymbol = "&&.bool"; returnType = "bool"; operandType = "bool";
                 break;
             case "LOW":
-                opSymbol = "<"; returnType = "bool"; operandType = "i32";
+                opSymbol = "<.bool"; returnType = "bool"; operandType = "i32";
                 break;
             case "ADD":
-                opSymbol = "+"; returnType = "i32"; operandType = "i32";
+                opSymbol = "+.i32"; returnType = "i32"; operandType = "i32";
                 break;
             case "SUB":
-                opSymbol = "-"; returnType = "i32"; operandType = "i32";
+                opSymbol = "-.i32"; returnType = "i32"; operandType = "i32";
                 break;
             case "MUL":
-                opSymbol = "*"; returnType = "i32"; operandType = "i32";
+                opSymbol = "*.i32"; returnType = "i32"; operandType = "i32";
                 break;
             case "DIV": 
-                opSymbol = "/"; returnType = "i32"; operandType = "i32";
+                opSymbol = "/.i32"; returnType = "i32"; operandType = "i32";
                 break;
         }
 
@@ -141,7 +140,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         code.append(stmt1.getCodeBefore());
         code.append(stmt2.getCodeBefore());
 
-        String rhs = String.format("%s %s.%s %s", stmt1.getResultVariable(), opSymbol, operandType,stmt2.getResultVariable());
+        String rhs = String.format("%s %s %s", stmt1.getResultVariable(), opSymbol, stmt2.getResultVariable());
         if(hint.needsTemporaryVar()) {
             String temporaryVariable = assignTemporary(returnType, rhs, code);
             return new OllirStatement(code.toString(), temporaryVariable);
@@ -154,7 +153,6 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
         String op = node.get("op");
         if(!op.equals("NEG")){
-            // TODO: Throw error
         }
         return new OllirStatement(code.toString(), "");
     }
@@ -236,8 +234,10 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         }
 
         if(returnTypeIsKnown){
-            Type returnType = symbolTable.getReturnType(methodName);
-            returnTypeString = OllirUtils.getCode(returnType);
+            if(symbolTable.getMethods().contains(methodName)){
+                Type returnType = symbolTable.getReturnType(methodName);
+                returnTypeString = OllirUtils.getCode(returnType);
+            } 
         }
 
         methodCallCode.append(".").append(returnTypeString);
@@ -260,10 +260,8 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         StringBuilder code = new StringBuilder();
         StringBuilder argumentList = new StringBuilder();
 
-        Boolean parametersAreAvailable = false;
+        boolean parametersAreAvailable = false;
         List<Symbol> parameters;
-
-        System.out.println(hint.getMethodSignature() + " - - - " + hint.getExpectedType());
 
         // visitClassMethod puts idName in the expectedType parameter
         if(symbolTable.getMethods().contains(hint.getMethodSignature())
@@ -274,8 +272,12 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             Symbol s = findSymbol(hint.getExpectedType()); // Caller can use methodsignature parameters as variable name
             if(s != null){
                 if(s.getType().equals(new Type(symbolTable.getClassName(), false))){
-                    parametersAreAvailable = true;
-                    parameters = symbolTable.getParameters(hint.getMethodSignature());
+                    if(symbolTable.getMethods().contains(hint.getMethodSignature())){
+                        parametersAreAvailable = true;
+                        parameters = symbolTable.getParameters(hint.getMethodSignature());
+                    } else {
+                        parameters = new ArrayList<>();
+                    }
                 } else {
                     parameters = new ArrayList<>();
                 }
@@ -321,6 +323,39 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         return visit(child, hint);
     }
 
+    private OllirStatement visitIfStatement(JmmNode node, OllirGeneratorHint hint){
+        StringBuilder code = new StringBuilder();
+
+        JmmNode conditionNode = node.getJmmChild(0);
+        JmmNode ifNode = node.getJmmChild(1);
+        JmmNode elseNode = node.getJmmChild(2);
+
+        OllirStatement conditionStatement = visit(conditionNode, hint);
+        OllirStatement ifStatement = visit(ifNode, hint);
+        OllirStatement elseStatement = visit(elseNode, hint);
+
+        code.append(conditionStatement.getCodeBefore())
+            .append(String.format("if(%s) goto else%d;\n", conditionStatement.getResultVariable(), labelCounter));
+        code.append(ifStatement.getCodeBefore()).append("goto endif").append(labelCounter).append(";\n");
+        code.append(String.format("else%d:\n", labelCounter));
+        code.append(elseStatement.getCodeBefore()).append("\nendif").append(labelCounter).append(":\n");
+
+        return new OllirStatement(code.toString(),"" );
+    }
+
+    private OllirStatement visitCondition(JmmNode node, OllirGeneratorHint hint){
+        return visit(node.getJmmChild(0), new OllirGeneratorHint(methodSignature, "bool", false));
+    }
+
+    private OllirStatement visitStatementScope(JmmNode node, OllirGeneratorHint hint){
+        StringBuilder code = new StringBuilder();
+        for(JmmNode child : node.getChildren()){
+            OllirStatement stmt = visit(child, hint);
+            code.append(stmt.getCodeBefore());
+        }
+        return new OllirStatement(code.toString(), "");
+    }
+ 
     // Appends a new temporary assignment to the code StringBuilder and returns the variable name
     private String assignTemporary(String type, String rhs, StringBuilder code){
         String temporary = "t" + temporaryVariableCounter++ + "." + type;

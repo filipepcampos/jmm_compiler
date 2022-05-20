@@ -1,7 +1,5 @@
 package pt.up.fe.comp.ollir;
 
-import pt.up.fe.comp.jmm.analysis.table.Type;
-
 public class OllirGeneratorHint {
     String expectedType; // Expected OLLIR type (bool, array.i32, etc...)
     String methodSignature; // Name of the current method

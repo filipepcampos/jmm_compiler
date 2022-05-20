@@ -36,7 +36,7 @@ public class MethodImportCheckVisitor extends AJmmVisitor<List<Report>, Boolean>
     private Boolean visitClassMethod(JmmNode node, List<Report> reports){
         String className = node.getJmmChild(0).get("name");
         
-        if(!(symbolTable.getImports().contains(className) || className.equals("this")
+        if(!(imports.contains(className) || className.equals("this")
                 || className.equals(symbolTable.getClassName()) || className.equals(symbolTable.getSuper()))){
             for(Symbol s : symbolTable.getLocalVariables(methodSignature)){
                 if(s.getName().equals(className)){

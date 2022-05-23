@@ -320,8 +320,11 @@ public class Cp2Test {
         assertNotNull("Could not find method " + methodName, methodFoo);
 
         var binOpInst = methodFoo.getInstructions().stream()
-                .filter(inst -> inst instanceof BinaryOpInstruction)
+                .filter(inst -> inst instanceof AssignInstruction)
+                .map(instr -> (AssignInstruction)instr)
+                .filter(assign -> assign.getRhs() instanceof BinaryOpInstruction)
                 .findFirst();
+
         assertTrue("Could not find a binary op instruction in method " + methodName, binOpInst.isPresent());
 
         var retInst = methodFoo.getInstructions().stream()

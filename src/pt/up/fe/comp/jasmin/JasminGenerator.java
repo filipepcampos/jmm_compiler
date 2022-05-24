@@ -353,6 +353,7 @@ public class JasminGenerator {
                 result.append(this.loadElement(method.getFirstArg(), varTable)).append("\tarraylength\n");
                 break;
             case ldc:
+            case bipush:
                 result.append(this.loadElement(method.getFirstArg(), varTable));
                 break;
         }
@@ -513,7 +514,7 @@ public class JasminGenerator {
         StringBuilder result = new StringBuilder();
 
         if (element instanceof LiteralElement) {
-            result.append("\tldc ").append(((LiteralElement) element).getLiteral()).append("\n");
+            result.append("\bipush ").append(((LiteralElement) element).getLiteral()).append("\n");
         } else if (element instanceof ArrayOperand) {
             ArrayOperand arrayOperand = (ArrayOperand) element;
             result.append("\taload ").append(varTable.get(arrayOperand.getName()).getVirtualReg()).append("\n");

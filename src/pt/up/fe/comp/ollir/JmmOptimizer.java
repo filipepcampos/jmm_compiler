@@ -31,6 +31,8 @@ public class JmmOptimizer implements JmmOptimization {
         printOllirCode(ollirCode);
 
         OllirResult result;
+        result = new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
+        /*
         try {
             result = new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
         } catch(Exception e){
@@ -39,7 +41,7 @@ public class JmmOptimizer implements JmmOptimization {
             // Code may use a feature that's not been implemented yet and doesn't generate correct ollirCode for it
             // TODO: Remove in the end of the project
             result = null;
-        }
+        }*/
 
         return result;
     }

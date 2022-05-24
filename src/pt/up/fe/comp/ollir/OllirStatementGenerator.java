@@ -36,15 +36,15 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         addVisit(AstNode.IF_STATEMENT, this::visitIfStatement);
         addVisit(AstNode.CONDITION, this::visitCondition);
         addVisit(AstNode.STATEMENT_SCOPE, this::visitStatementScope);
+        addVisit(AstNode.WHILE_STATEMENT, this::visitWhileStatement);
+        addVisit(AstNode.LENGTH_OP, this::visitLengthOp);
+        addVisit(AstNode.ARRAY_ACCESS, this::visitArrayAccess);
 
         /*
-        LENGTH_OP,
-        CONDITION,
         ARRAY_ACCESS,
         ARRAY_INITIALIZATION,
         ARRAY_ASSIGNMENT
-        WHILE_STATEMENT,
-        STATEMENT_SCOPE
+        WHILE_STATEMENT
         */
     }
 
@@ -339,12 +339,14 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         code.append(ifStatement.getCodeBefore()).append("goto endif").append(labelCounter).append(";\n");
         code.append(String.format("else%d:\n", labelCounter));
         code.append(elseStatement.getCodeBefore()).append("\nendif").append(labelCounter).append(":\n");
+        labelCounter++;
 
         return new OllirStatement(code.toString(),"" );
     }
 
     private OllirStatement visitCondition(JmmNode node, OllirGeneratorHint hint){
-        return visit(node.getJmmChild(0), new OllirGeneratorHint(methodSignature, "bool", false));
+        OllirStatement stmt = visit(node.getJmmChild(0), new OllirGeneratorHint(methodSignature, "bool", true));
+        return new OllirStatement(stmt.getCodeBefore(), stmt.getResultVariable());
     }
 
     private OllirStatement visitStatementScope(JmmNode node, OllirGeneratorHint hint){
@@ -354,6 +356,42 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             code.append(stmt.getCodeBefore());
         }
         return new OllirStatement(code.toString(), "");
+    }
+
+    private OllirStatement visitWhileStatement(JmmNode node, OllirGeneratorHint hint){
+        StringBuilder code = new StringBuilder();
+        
+
+        JmmNode conditionNode = node.getJmmChild(0);
+        JmmNode bodyNode = node.getJmmChild(1);
+
+        OllirStatement conditionStatement = visit(conditionNode, hint);
+        OllirStatement bodyStatement = visit(bodyNode, hint);
+
+        code.append("loop").append(labelCounter).append(": \n");
+        code.append(conditionStatement.getCodeBefore())
+            .append(String.format("if(%s) goto body%d;\n", conditionStatement.getResultVariable(), labelCounter));
+        code.append(String.format("goto endLoop%d;\nbody%d:\n", labelCounter, labelCounter));
+        code.append(bodyStatement.getCodeBefore()).append(String.format("goto loop%d;\n endLoop%d:\n", labelCounter, labelCounter));
+        labelCounter++;
+
+        return new OllirStatement(code.toString(),"" );
+    }
+
+    private OllirStatement visitLengthOp(JmmNode node, OllirGeneratorHint hint){
+        StringBuilder code = new StringBuilder();
+        OllirStatement statement = visit(node.getJmmChild(0), hint); // TODO: Maybe add hint
+        code.append("arraylength(").append(statement.getResultVariable()).append(").i32;\n");
+        return new OllirStatement(statement.getCodeBefore(), code.toString());
+    }
+
+    private OllirStatement visitArrayAccess(JmmNode node, OllirGeneratorHint hint){
+        StringBuilder code = new StringBuilder();
+        OllirStatement arrayStmt = visit(node.getJmmChild(0), hint);
+        OllirStatement indexStmt = visit(node.getJmmChild(1), new OllirGeneratorHint(hint.getMethodSignature(), "i32", true));
+        // C[i.i32].i32 :=.i32 t4.i32;
+        code.append(arrayStmt.getResultVariable()+"[")
+            .append(indexStmt.getResultVariable()).append("]");
     }
  
     // Appends a new temporary assignment to the code StringBuilder and returns the variable name

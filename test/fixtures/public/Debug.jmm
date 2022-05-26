@@ -1,61 +1,22 @@
-import MathUtils; //lowerLimit,upperLimit
-import Quicksort;
-import Something.other.othe.oth;
+import ioPlus;
+class HelloWorld {
+	public static void main(String[] args) {
+	    int[] a;
+	    int b;
+	    int c;
+	    HelloWorld w;
+		ioPlus.printHelloWorld();
+		a = new int[5];
+		c = 0 + 1 + 2 + 3 + 4 + 5 + 6;
+		b = a[0];
+		w = new HelloWorld();
+		w.foo(a);
+	}
 
-class Lazysort extends Quicksort {
-    int[] attribute1;
-    int attribute2;
-    String attribute3;
-
-    public static void main(String[] a) {
-        int[] L;
-        int i;
-		boolean d;
-        Lazysort q;
-
-        {
-            i = 1 + 2 * 3;
-            i = i * i;
-        }
-        L = new int[10];
-
-        i = 1 + 2 + 3 + 4 * 5 + 6;
-
-        i = 0;
-        while (i < L.length) {
-            L[i] = L.length - i;
-            i = i + 1;
-        }
-
-        q = new Lazysort();
-
-        q.quicksort(L);
-        d = q.printL(L);
-    }
-
-    public boolean quicksort(int[] L) {
-        boolean lazy;
-        int rand;
-        rand = MathUtils.random(0, 5);
-        if (rand  < 4 ) {
-            this.beLazy(L);
-            L[1] = L[5];
-            lazy = true;
-        }
-        else {
-            lazy = false;
-        }
-        
-        if ( lazy ) {
-            lazy = !lazy;
-        }
-        else {
-            lazy = this.quicksort(L, 0, L.length - 1);
-        }
-
-		rand = rand + rand + lazy + lazy * lazy;
-        
-        return 5+2*lazy;
-    }
-
+	public int foo(int[] a){
+	    int b;
+	    ioPlus.printHelloWorld();
+	    b = a[0];
+	    return 0;
+	}
 }

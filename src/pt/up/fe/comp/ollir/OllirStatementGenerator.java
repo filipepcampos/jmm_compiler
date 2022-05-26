@@ -39,12 +39,10 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         addVisit(AstNode.WHILE_STATEMENT, this::visitWhileStatement);
         addVisit(AstNode.LENGTH_OP, this::visitLengthOp);
         addVisit(AstNode.ARRAY_ACCESS, this::visitArrayAccess);
+        addVisit(AstNode.ARRAY_INITIALIZATION, this::visitArrayInitialization);
 
         /*
-        ARRAY_ACCESS,
-        ARRAY_INITIALIZATION,
         ARRAY_ASSIGNMENT
-        WHILE_STATEMENT
         */
     }
 
@@ -96,7 +94,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             case "hexadecimal": value = Integer.parseInt(stringValue, 16);
                 break;
         }
-        return new OllirStatement("", String.valueOf(value) + ".i32");
+        return new OllirStatement("", value + ".i32");
     }
 
     private OllirStatement visitBool(JmmNode node, OllirGeneratorHint hint){
@@ -389,9 +387,42 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         StringBuilder code = new StringBuilder();
         OllirStatement arrayStmt = visit(node.getJmmChild(0), hint);
         OllirStatement indexStmt = visit(node.getJmmChild(1), new OllirGeneratorHint(hint.getMethodSignature(), "i32", true));
-        // C[i.i32].i32 :=.i32 t4.i32;
-        code.append(arrayStmt.getResultVariable()+"[")
-            .append(indexStmt.getResultVariable()).append("]");
+
+        code.append(arrayStmt.getCodeBefore())
+                .append(indexStmt.getCodeBefore());
+
+        String indexVar;
+        if(node.getJmmChild(1).getKind().equals("IntLiteral")){
+            // int[] a; ...; a[0.i32].i32 isn't valid but a[t0.i32].i32
+            StringBuilder temporaryCode = new StringBuilder();
+            indexVar = assignTemporary("i32", indexStmt.getResultVariable(), temporaryCode);
+            code.append(temporaryCode);
+        } else {
+            indexVar = indexStmt.getResultVariable();
+        }
+
+        // TODO: Use other types
+        String arrayStmtResult = arrayStmt.getResultVariable();
+        // TODO: Deal with parameters
+        String[] splitArrayStmtResult = arrayStmtResult.split("\\.");
+        String arrayName = splitArrayStmtResult[0];
+        // example: t0.array.i32 -> index 0 holds the name and index length-1 holds the type
+        if(splitArrayStmtResult.length == 4){ // $0.a.array.i32
+            arrayName += "." + splitArrayStmtResult[1];
+        }
+
+        String rhs = String.format("%s[%s].%s", arrayName, indexVar, splitArrayStmtResult[splitArrayStmtResult.length-1]);
+        if(hint.needsTemporaryVar()){
+            String temporary = assignTemporary("i32", rhs, code);
+            return new OllirStatement(code.toString(), temporary);
+        } else {
+            return new OllirStatement(code.toString(), rhs);
+        }
+    }
+
+    private OllirStatement visitArrayInitialization(JmmNode node, OllirGeneratorHint hint){
+        OllirStatement sizeStmt = visit(node.getJmmChild(0), new OllirGeneratorHint(hint.getMethodSignature(), ".i32", true));
+        return new OllirStatement(sizeStmt.getCodeBefore(), String.format("new(array, %s).array.i32", sizeStmt.getResultVariable()));
     }
  
     // Appends a new temporary assignment to the code StringBuilder and returns the variable name

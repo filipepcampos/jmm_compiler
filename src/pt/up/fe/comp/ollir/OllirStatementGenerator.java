@@ -40,10 +40,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         addVisit(AstNode.LENGTH_OP, this::visitLengthOp);
         addVisit(AstNode.ARRAY_ACCESS, this::visitArrayAccess);
         addVisit(AstNode.ARRAY_INITIALIZATION, this::visitArrayInitialization);
-
-        /*
-        ARRAY_ASSIGNMENT
-        */
+        addVisit(AstNode.ARRAY_ASSIGNMENT, this::visitArrayAssignment);
     }
 
     private OllirStatement defaultVisit(JmmNode node, OllirGeneratorHint hint){
@@ -64,8 +61,8 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             code.append(stmt.getCodeBefore());
 
             code.append(symbol.getName())
-                .append(" :=.").append(OllirUtils.getCode(symbol.getType()))
-                .append(" ");
+                    .append(" :=.").append(OllirUtils.getCode(symbol.getType()))
+                    .append(" ");
 
             code.append(stmt.getResultVariable()).append(";\n");
         } else {
@@ -74,9 +71,9 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             OllirStatement stmt = visit(node.getJmmChild(0), hintForChild);
             code.append(stmt.getCodeBefore());
             code.append("putfield(this, ").append(symbol.getName())
-                .append(", ").append(stmt.getResultVariable()).append(").V;\n");
+                    .append(", ").append(stmt.getResultVariable()).append(").V;\n");
         }
-        
+
         return new OllirStatement(code.toString(), symbol.getName());
     }
 
@@ -368,8 +365,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
         code.append("loop").append(labelCounter).append(": \n");
         code.append(conditionStatement.getCodeBefore())
-            .append(String.format("if(%s) goto body%d;\n", conditionStatement.getResultVariable(), labelCounter));
-        code.append(String.format("goto endLoop%d;\nbody%d:\n", labelCounter, labelCounter));
+            .append(String.format("if(%s) goto endLoop%d;\n", conditionStatement.getResultVariable(), labelCounter));
         code.append(bodyStatement.getCodeBefore()).append(String.format("goto loop%d;\n endLoop%d:\n", labelCounter, labelCounter));
         labelCounter++;
 
@@ -401,7 +397,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             indexVar = indexStmt.getResultVariable();
         }
 
-        // TODO: Use other types
+
         String arrayStmtResult = arrayStmt.getResultVariable();
         // TODO: Deal with parameters
         String[] splitArrayStmtResult = arrayStmtResult.split("\\.");
@@ -423,6 +419,52 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
     private OllirStatement visitArrayInitialization(JmmNode node, OllirGeneratorHint hint){
         OllirStatement sizeStmt = visit(node.getJmmChild(0), new OllirGeneratorHint(hint.getMethodSignature(), ".i32", true));
         return new OllirStatement(sizeStmt.getCodeBefore(), String.format("new(array, %s).array.i32", sizeStmt.getResultVariable()));
+    }
+
+    private OllirStatement visitArrayAssignment(JmmNode node, OllirGeneratorHint hint){
+        StringBuilder code = new StringBuilder();
+        String arrayName = node.get("name");
+
+        OllirStatement indexStmt = visit(node.getJmmChild(0), new OllirGeneratorHint(hint.getMethodSignature(), "i32", true));
+
+        // Get index variable
+        String indexVar;
+        if(node.getJmmChild(0).getKind().equals("IntLiteral")){
+            // int[] a; ...; a[0.i32].i32 isn't valid but a[t0.i32].i32
+            StringBuilder temporaryCode = new StringBuilder();
+            indexVar = assignTemporary("i32", indexStmt.getResultVariable(), temporaryCode);
+            code.append(temporaryCode);
+        } else {
+            indexVar = indexStmt.getResultVariable();
+        }
+
+
+        Symbol symbol = findLocal(arrayName);
+        if(symbol != null){
+            Type arrayElementType = new Type(symbol.getType().getName(), false);
+            OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(arrayElementType), hint.getMethodSignature(), false);
+            OllirStatement stmt = visit(node.getJmmChild(1), hintForChild);
+            code.append(stmt.getCodeBefore());
+
+            String lhs = String.format("%s[%s].%s", arrayName, indexVar, OllirUtils.getOllirType(symbol.getType().getName()));
+            code.append(lhs)
+                .append(" :=.").append(OllirUtils.getCode(arrayElementType))
+                .append(" ");
+
+            code.append(stmt.getResultVariable()).append(";\n");
+        } else {
+            // TODO:
+            /*
+            symbol = findField(arrayName);
+            Type arrayElementType = new Type(symbol.getType().getName(), false);
+            OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(arrayElementType), hint.getMethodSignature(), false);
+            OllirStatement stmt = visit(node.getJmmChild(1), hintForChild);
+            code.append(stmt.getCodeBefore());
+            code.append("putfield(this, ").append(symbol.getName())
+                .append(", ").append(stmt.getResultVariable()).append(").V;\n");*/
+        }
+
+        return new OllirStatement(code.toString(), symbol.getName());
     }
  
     // Appends a new temporary assignment to the code StringBuilder and returns the variable name

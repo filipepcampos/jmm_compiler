@@ -11,6 +11,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.specs.comp.ollir.Method;
+import org.specs.comp.ollir.Node;
+import org.specs.comp.ollir.OllirErrorException;
+
 public class JmmOptimizer implements JmmOptimization {
     @Override
     public OllirResult toOllir(JmmSemanticsResult semanticsResult) {
@@ -67,5 +71,27 @@ public class JmmOptimizer implements JmmOptimization {
             if(c == '{')
                 indent++;
         }
+    }
+
+    @Override
+    public JmmSemanticsResult optimize(JmmSemanticsResult semanticsResult) {
+        return semanticsResult;
+    }
+
+    @Override
+    public OllirResult optimize(OllirResult ollirResult) {
+        // DEBUG TODO: Remove
+        
+        for (Method method : ollirResult.getOllirClass().getMethods()) {
+            method.buildCFG();
+            try {
+                method.outputCFG();
+            } catch(OllirErrorException e){
+                e.printStackTrace();
+            }
+            Node node = method.getBeginNode();  // TODO: Cast to instruction
+        }
+
+        return ollirResult;
     }
 }

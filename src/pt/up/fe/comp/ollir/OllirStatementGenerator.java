@@ -205,7 +205,17 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             methodCallCode.append("invokestatic(").append(idName);
         } else {
             methodCallCode.append(idStmt.getCodeBefore());
-            methodCallCode.append("invokevirtual(").append(idStmt.getResultVariable());
+            methodCallCode.append("invokevirtual(");
+
+            String className = idStmt.getResultVariable();
+            if(className.startsWith("$")){
+                System.out.println(className);
+                String[] splitString = className.split("\\.");
+                String temporary = assignTemporary(splitString[splitString.length-1], className, new StringBuilder());
+                methodCallCode.append(temporary);
+            } else {
+                methodCallCode.append(className);
+            }
         }
         methodCallCode.append(", ").append("\"").append(methodName).append("\"");
         methodCallCode.append(argumentStmt.getResultVariable()).append(")");

@@ -104,12 +104,20 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
             return new JmmType(null, false);
         }
 
-        Symbol symbol = getSymbolByName(name, node, reports);
-        if(symbol == null){
-            reports.add(createSemanticError(node, "Symbol " + name + " is not defined." ));
-            return new JmmType("", false);
+        if(name.equals("this")){
+            if(symbolTable.getSuper() != null){
+                return new JmmType(symbolTable.getClassName(), false);
+            } else {
+                return new JmmType(symbolTable.getClassName(), false, true);
+            }
+        } else {
+            Symbol symbol = getSymbolByName(name, node, reports);
+            if(symbol == null){
+                reports.add(createSemanticError(node, "Symbol " + name + " is not defined." ));
+                return new JmmType("", false);
+            }
+            return new JmmType(symbol.getType());
         }
-        return new JmmType(symbol.getType());
     }
 
     private JmmType visitLengthOp(JmmNode node, List<Report> reports){

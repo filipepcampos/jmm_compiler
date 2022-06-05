@@ -148,8 +148,19 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
         String op = node.get("op");
         if(!op.equals("NEG")){
+            return new OllirStatement("", "");
         }
-        return new OllirStatement(code.toString(), "");
+
+        OllirGeneratorHint childHint = new OllirGeneratorHint(hint.getMethodSignature(), "bool", true);
+        OllirStatement childStmt = visit(node.getJmmChild(0), childHint);
+        code.append(childStmt.getCodeBefore());
+
+        String rhs = "!.bool " + childStmt.getResultVariable();
+        if(hint.needsTemporaryVar()){
+            String temporary = assignTemporary("bool", rhs, code);
+            return new OllirStatement(code.toString(), temporary);
+        }
+        return new OllirStatement(code.toString(), rhs);
     }
 
     private OllirStatement visitId(JmmNode node, OllirGeneratorHint hint){
@@ -211,7 +222,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             if(className.startsWith("$")){
                 System.out.println(className);
                 String[] splitString = className.split("\\.");
-                String temporary = assignTemporary(splitString[splitString.length-1], className, new StringBuilder());
+                String temporary = assignTemporary(splitString[splitString.length-1], className, code);
                 methodCallCode.append(temporary);
             } else {
                 methodCallCode.append(className);
@@ -391,7 +402,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             String temporary = assignTemporary("i32", rhs, code);
             return new OllirStatement(code.toString(), temporary);
         }
-        code.append(rhs).append(";\n");
+        code.append(rhs);
         return new OllirStatement(statement.getCodeBefore(), code.toString());
     }
 

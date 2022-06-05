@@ -66,7 +66,7 @@ public class OllirGenerator extends AJmmVisitor<Boolean, Integer> {
     private Integer visitMainMethodDecl(JmmNode node, Boolean dummy){
         code.append(".method public static main(args.array.String).V {\n");
         generateMethodStatements(node, "main");
-        code.append("}\n\n");
+        code.append("ret.V;\n}\n\n");
         return 0;
     }
 

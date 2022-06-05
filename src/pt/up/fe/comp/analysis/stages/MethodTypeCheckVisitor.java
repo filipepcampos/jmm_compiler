@@ -70,9 +70,22 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
                 return s;
             }
         }
-        for(Symbol s : this.parametersAndFields){
-            if(name.equals(s.getName())){
-                return s;
+        return getParameterOrField(name);
+    }
+
+    private Symbol getParameterOrField(String name) {
+        if(methodSignature.equals("main")){
+            // Can't use fields in static context
+            for(Symbol s : symbolTable.getParameters("main")){
+                if(name.equals(s.getName())){
+                    return s;
+                }
+            }
+        } else {
+            for(Symbol s : this.parametersAndFields){
+                if(name.equals(s.getName())){
+                    return s;
+                }
             }
         }
         return null;
@@ -88,12 +101,8 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
                 return s;
             }
         }
-        for(Symbol s : this.parametersAndFields){
-            if(name.equals(s.getName())){
-                return s;
-            }
-        }
-        return null;
+
+        return getParameterOrField(name);
     }
 
     private JmmType visitId(JmmNode node, List<Report> reports){
@@ -104,12 +113,20 @@ public class MethodTypeCheckVisitor extends AJmmVisitor<List<Report>, JmmType> {
             return new JmmType(null, false);
         }
 
-        Symbol symbol = getSymbolByName(name, node, reports);
-        if(symbol == null){
-            reports.add(createSemanticError(node, "Symbol " + name + " is not defined." ));
-            return new JmmType("", false);
+        if(name.equals("this")){
+            if(symbolTable.getSuper() != null){
+                return new JmmType(symbolTable.getClassName(), false);
+            } else {
+                return new JmmType(symbolTable.getClassName(), false, true);
+            }
+        } else {
+            Symbol symbol = getSymbolByName(name, node, reports);
+            if(symbol == null){
+                reports.add(createSemanticError(node, "Symbol " + name + " is not defined." ));
+                return new JmmType("", false);
+            }
+            return new JmmType(symbol.getType());
         }
-        return new JmmType(symbol.getType());
     }
 
     private JmmType visitLengthOp(JmmNode node, List<Report> reports){

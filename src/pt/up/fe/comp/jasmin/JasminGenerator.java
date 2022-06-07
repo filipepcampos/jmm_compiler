@@ -26,7 +26,7 @@ public class JasminGenerator {
         result.append(this.convertClass());
         result.append(this.convertMethods());
 
-        //System.out.println(result);     // DEBUG
+        System.out.println(result);     // DEBUG
         
         return new JasminResult(result.toString());
     }

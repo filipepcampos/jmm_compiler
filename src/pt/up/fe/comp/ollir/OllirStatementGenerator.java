@@ -56,7 +56,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
         Symbol symbol = findLocal(name);
         if(symbol != null){
-            OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(symbol.getType()), hint.getMethodSignature(), false);
+            OllirGeneratorHint hintForChild = new OllirGeneratorHint(hint.getMethodSignature(), OllirUtils.getCode(symbol.getType()), false);
             OllirStatement stmt = visit(node.getJmmChild(0), hintForChild);
             code.append(stmt.getCodeBefore());
 

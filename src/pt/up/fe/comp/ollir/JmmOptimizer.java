@@ -1,5 +1,6 @@
 package pt.up.fe.comp.ollir;
 
+import pt.up.fe.comp.TestUtils;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
@@ -21,8 +22,9 @@ public class JmmOptimizer implements JmmOptimization {
             // Might occur due to unsupported features like method overloading
             List<Report> reports = new ArrayList<>();
             reports.add(new Report(ReportType.ERROR, Stage.LLIR, -1, "OLLIR parse exception occurred."));
+            throw(e);
             // OllirResult cannot be created with invalid ollir code
-            return null; 
+            //return null;
 
         }
         String ollirCode = ollirGenerator.getCode();
@@ -31,6 +33,8 @@ public class JmmOptimizer implements JmmOptimization {
         printOllirCode(ollirCode);
 
         OllirResult result;
+        result = new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
+        /*
         try {
             result = new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
         } catch(Exception e){
@@ -39,7 +43,7 @@ public class JmmOptimizer implements JmmOptimization {
             // Code may use a feature that's not been implemented yet and doesn't generate correct ollirCode for it
             // TODO: Remove in the end of the project
             result = null;
-        }
+        }*/
 
         return result;
     }

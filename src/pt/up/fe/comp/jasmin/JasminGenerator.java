@@ -198,8 +198,8 @@ public class JasminGenerator {
         .limit stack 99
         .limit locals 99
         */
-
-        return "\t.limit stack 99\n\t.limit locals 99\n";
+        int localsSize = method.getVarTable().size() + (method.isStaticMethod() || method.getVarTable().containsKey("this") ? 0 : 1);
+        return "\t.limit stack 99\n\t.limit locals " + localsSize + "\n";
     }
 
     public String getFullyQualifiedName(String className) {

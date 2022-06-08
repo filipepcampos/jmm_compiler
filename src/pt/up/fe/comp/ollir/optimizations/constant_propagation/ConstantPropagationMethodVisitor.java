@@ -22,16 +22,15 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
         setDefaultVisit(this::defaultVisit);
     }
 
-    public boolean defaultVisit(JmmNode node, Boolean dummy){
+    private boolean defaultVisit(JmmNode node, Boolean dummy){
         boolean updated = false;
         for(var stmt : node.getChildren()) {
-            boolean visitResult = visit(stmt, true);
-            updated |= visitResult;
+            updated |= visit(stmt, true);
         }
         return updated;
     }
 
-    public boolean visitAssignment(JmmNode node, Boolean dummy){
+    private boolean visitAssignment(JmmNode node, Boolean dummy){
         String name = node.get("name");
         JmmNode childNode = node.getJmmChild(0);
         visit(childNode);
@@ -54,7 +53,7 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
         return false;
     }
 
-    public boolean visitId(JmmNode node, Boolean dummy){
+    private boolean visitId(JmmNode node, Boolean dummy){
         String name = node.get("name");
         
         if(node.getJmmParent().getKind().equals("ClassMethod")){
@@ -70,9 +69,13 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
         return false;
     }
 
-    public boolean visitClassMethod(JmmNode node, Boolean dummy){
+    private boolean visitClassMethod(JmmNode node, Boolean dummy){
+        boolean updated = false;
+
         JmmNode arguments = node.getJmmChild(1);
-        for(var argument : arguments.getChildren()){
+        for(int i = 0; i < arguments.getNumChildren(); ++i){
+            updated |= visit(arguments.getJmmChild(i));
+            JmmNode argument = arguments.getJmmChild(i);
             if(argument.getKind().equals("Id")){
                 String name = argument.get("name");
                 if(this.constantMap.containsKey(name)){ // Can't guarantee there's no side effects in method
@@ -80,7 +83,7 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
                 }
             }
         }
-        return false;
+        return updated;
     }
 
     

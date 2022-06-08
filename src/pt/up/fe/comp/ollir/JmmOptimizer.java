@@ -2,12 +2,16 @@ package pt.up.fe.comp.ollir;
 
 import pt.up.fe.comp.TestUtils;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
+import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.report.Stage;
+import pt.up.fe.comp.ollir.optimizations.constant_folding.ConstantFoldingMethodVisitor;
+import pt.up.fe.comp.ollir.optimizations.constant_folding.ConstantFoldingVisitor;
 import pt.up.fe.comp.ollir.optimizations.constant_propagation.ConstantPropagationVisitor;
+import pt.up.fe.comp.ollir.optimizations.unused_assignment_removing.UnusedAssignmentRemoverVisitor;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -80,8 +84,26 @@ public class JmmOptimizer implements JmmOptimization {
 
     @Override
     public JmmSemanticsResult optimize(JmmSemanticsResult semanticsResult) {
-        ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
-        constantPropagationVisitor.visit(semanticsResult.getRootNode());
+        JmmNode rootNode = semanticsResult.getRootNode();
+
+        boolean updated;
+        do {
+            updated = false;
+
+            ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
+            updated |= constantPropagationVisitor.visit(rootNode);
+
+            System.out.println("c prop. " + updated);
+            
+            ConstantFoldingVisitor constantFoldingVisitor = new ConstantFoldingVisitor();
+            updated |= constantFoldingVisitor.visit(rootNode);
+
+            System.out.println("c fold. " + updated);
+        } while(updated);
+
+        UnusedAssignmentRemoverVisitor unusedAssignmentRemoverVisitor = new UnusedAssignmentRemoverVisitor(semanticsResult.getSymbolTable());
+        unusedAssignmentRemoverVisitor.visit(rootNode);
+
         return semanticsResult;
     }
 

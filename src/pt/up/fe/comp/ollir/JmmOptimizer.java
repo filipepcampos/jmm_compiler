@@ -86,7 +86,11 @@ public class JmmOptimizer implements JmmOptimization {
     public JmmSemanticsResult optimize(JmmSemanticsResult semanticsResult) {
         JmmNode rootNode = semanticsResult.getRootNode();
 
-        boolean updated;
+        boolean updated = false;
+        ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
+        updated |= constantPropagationVisitor.visit(rootNode);
+
+        /*
         do {
             updated = false;
 
@@ -102,7 +106,7 @@ public class JmmOptimizer implements JmmOptimization {
         } while(updated);
 
         UnusedAssignmentRemoverVisitor unusedAssignmentRemoverVisitor = new UnusedAssignmentRemoverVisitor(semanticsResult.getSymbolTable());
-        unusedAssignmentRemoverVisitor.visit(rootNode);
+        unusedAssignmentRemoverVisitor.visit(rootNode);*/
 
         return semanticsResult;
     }
@@ -110,7 +114,9 @@ public class JmmOptimizer implements JmmOptimization {
     @Override
     public OllirResult optimize(OllirResult ollirResult) {
         // DEBUG TODO: Remove
-        
+         
+        ollirResult.getOllirClass().buildCFGs();
+        /*
         for (Method method : ollirResult.getOllirClass().getMethods()) {
             method.buildCFG();
             try {
@@ -119,7 +125,7 @@ public class JmmOptimizer implements JmmOptimization {
                 e.printStackTrace();
             }
             Node node = method.getBeginNode();  // TODO: Cast to instruction
-        }
+        }*/
 
         return ollirResult;
     }

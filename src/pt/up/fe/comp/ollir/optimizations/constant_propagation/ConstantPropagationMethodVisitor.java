@@ -19,6 +19,7 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
         addVisit(AstNode.ID, this::visitId);
         addVisit(AstNode.ASSIGNMENT, this::visitAssignment);
         addVisit(AstNode.CLASS_METHOD, this::visitClassMethod);
+        addVisit(AstNode.WHILE_STATEMENT, this::visitWhileStatement);
         setDefaultVisit(this::defaultVisit);
     }
 
@@ -40,9 +41,7 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
             System.out.println("Setting " + name + ": " + childNode);
             JmmNode newNode = new JmmNodeImpl(childNodeKind);
             newNode.put("value", childNode.get("value"));
-            if(childNode.get("type") != null){
-                newNode.put("type", childNode.get("type"));
-            }
+            childNode.getOptional("type").ifPresent(t -> newNode.put("type", t));
             constantMap.put(name, newNode);
         } else {
             if(constantMap.containsKey(name)){
@@ -86,5 +85,30 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
         return updated;
     }
 
-    
+    private boolean visitWhileStatement(JmmNode node, Boolean dummy){
+        JmmNode conditionChild = node.getJmmChild(0);
+        JmmNode statements = node.getJmmChild(1);
+
+        if(conditionChild.getKind().equals("Id")){
+            String name = conditionChild.get("name");
+            if(this.constantMap.containsKey(name) && !containsVariableUsage(statements, name)){
+                visit(conditionChild); // This will swap the node for 
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsVariableUsage(JmmNode node, String variableName){
+        if(node.getKind().equals("Id")){
+            return node.get("name").equals(variableName);
+        }
+        boolean contains = false;
+        for(JmmNode child : node.getChildren()){
+            if(containsVariableUsage(child, variableName)){
+                return true;
+            }
+        }
+        return false;
+    }
 }

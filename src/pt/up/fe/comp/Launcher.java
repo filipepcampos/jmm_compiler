@@ -3,21 +3,15 @@ package pt.up.fe.comp;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import com.javacc.parser.ParseException;
 
 import pt.up.fe.comp.analysis.JmmAnalyser;
-import pt.up.fe.comp.analysis.table.SymbolTableBuilder;
-import pt.up.fe.comp.analysis.table.SymbolTableCollector;
 import pt.up.fe.comp.jasmin.OllirToJasmin;
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
+import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
-import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -94,19 +88,26 @@ public class Launcher {
             return;
         }
 
+        // Optimizer
+        JmmOptimization optimizer = new JmmOptimizer();
+
+        // AST optimization
+        JmmSemanticsResult semanticsOptimizationResult = optimizer.optimize(analysisResult);
+
         // AST to OLLIR
-        JmmOptimizer optimizer = new JmmOptimizer();
-        OllirResult ollirResult = optimizer.toOllir(analysisResult);
+        OllirResult ollirResult = optimizer.toOllir(semanticsOptimizationResult);
         if(ollirResult == null){
             System.out.println("Program finished due to error in conversion to ollir.");
             return;
         }
-        //var optimizationResult = optimizer.optimize(analysisResult);
-        TestUtils.noErrors(ollirResult);
+
+        // OLLIR optimization
+        OllirResult ollirOptimizationResult = optimizer.optimize(ollirResult);
+        TestUtils.noErrors(ollirOptimizationResult);
 
         // OLLIR to Jasmin
         OllirToJasmin converter = new OllirToJasmin();
-        JasminResult result = converter.toJasmin(ollirResult);
+        JasminResult result = converter.toJasmin(ollirOptimizationResult);
 
         result.compile();
         result.run();

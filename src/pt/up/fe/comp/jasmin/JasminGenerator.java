@@ -2,6 +2,8 @@ package pt.up.fe.comp.jasmin;
 
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
 
+import java.io.IOError;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -140,6 +142,11 @@ public class JasminGenerator {
 
         // method instructions
         method.buildVarTable();
+        try {
+            method.outputCFG();
+        } catch (OllirErrorException e) {
+            e.printStackTrace();
+        }
         Instruction lastInstruction = null;
         for (Instruction instruction : method.getInstructions()) {
             result.append(this.getCode(instruction, method.getVarTable(), method.getLabels(instruction)));

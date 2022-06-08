@@ -9,9 +9,11 @@ import pt.up.fe.comp.jmm.ast.JmmNodeImpl;
 
 public class ConstantFoldingMethodVisitor extends AJmmVisitor<Boolean, Optional<Integer>> {
     String methodSignature;
+    Boolean updated;
 
     public ConstantFoldingMethodVisitor(String methodSignature){
         this.methodSignature = methodSignature;
+        this.updated = false;
         
         addVisit(AstNode.INT_LITERAL, this::visitIntLiteral);
         addVisit(AstNode.BOOL, this::visitBool);
@@ -21,16 +23,10 @@ public class ConstantFoldingMethodVisitor extends AJmmVisitor<Boolean, Optional<
     }
 
     private Optional<Integer> defaultVisit(JmmNode node, Boolean dummy){
-        int updated = 0;
         for(var stmt : node.getChildren()) {
-            Optional<Integer> visitResult = visit(stmt, true);
-
-            if(visitResult.isPresent() && updated == 0 &&
-                !(stmt.getKind().equals("IntLiteral") || stmt.getKind().equals("Bool"))){
-                updated =  visitResult.get() > 0 ? 1 : 0;
-            }
+            visit(stmt, true);
         }
-        return Optional.of(updated);
+        return Optional.empty();
     }
 
     private Optional<Integer> visitIntLiteral(JmmNode node, Boolean dummy){
@@ -60,12 +56,13 @@ public class ConstantFoldingMethodVisitor extends AJmmVisitor<Boolean, Optional<
         JmmNode child = node.getJmmChild(0);
         Optional<Integer> optional = visit(child);
         
-        optional.ifPresent(i -> {
+        if(optional.isPresent()){
             node.removeJmmChild(child);
             JmmNode newChild = new JmmNodeImpl("Bool");
-            newChild.put("value",  Integer.toString(1 - i)); // !
+            newChild.put("value",  Integer.toString(1 - optional.get())); // !
             node.replace(newChild);
-        });
+            updated = true;
+        }
         return optional;
     }
 
@@ -75,9 +72,11 @@ public class ConstantFoldingMethodVisitor extends AJmmVisitor<Boolean, Optional<
         Optional<Integer> firstChild = visit(node.getJmmChild(0));
         Optional<Integer> secondChild = visit(node.getJmmChild(1));
 
+        System.out.println(node + "->" + node.getJmmChild(0) + " -> " + node.getJmmChild(1));
         if(firstChild.isEmpty() || secondChild.isEmpty()){
             return Optional.empty();
         }
+        System.out.println("simplifying");
 
         JmmNode newNode = null;
         Integer value = 0;
@@ -115,9 +114,14 @@ public class ConstantFoldingMethodVisitor extends AJmmVisitor<Boolean, Optional<
         if(node != null){
             newNode.put("value", Integer.toString(value));
             node.replace(newNode);
+            updated = true;
             return Optional.of(value);
         }
         return Optional.empty();
+    }
+
+    public Boolean wasUpdated() {
+        return updated;
     }
     
 }

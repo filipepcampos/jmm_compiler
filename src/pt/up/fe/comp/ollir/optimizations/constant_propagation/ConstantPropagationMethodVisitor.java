@@ -92,18 +92,17 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
         if(conditionChild.getKind().equals("Id")){
             String name = conditionChild.get("name");
             if(this.constantMap.containsKey(name) && !containsVariableUsage(statements, name)){
-                visit(conditionChild); // This will swap the node for 
+                visit(conditionChild); // This will swap the node with a const
                 return true;
             }
         }
-        return false;
+        return false; // TODO: Should while statementscope receive constant propagation?
     }
 
     private boolean containsVariableUsage(JmmNode node, String variableName){
         if(node.getKind().equals("Id")){
             return node.get("name").equals(variableName);
         }
-        boolean contains = false;
         for(JmmNode child : node.getChildren()){
             if(containsVariableUsage(child, variableName)){
                 return true;

@@ -39,6 +39,7 @@ public class UnusedAssignmentRemoverMethodVisitor extends AJmmVisitor<Boolean, B
     private boolean visitAssignment(JmmNode node, Boolean dummy){
         String name = node.get("name");
         this.nameToAssignmentNode.put(name, node);
+        visit(node.getJmmChild(0));
         return false;
     }
 

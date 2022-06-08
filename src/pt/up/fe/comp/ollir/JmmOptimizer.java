@@ -16,6 +16,7 @@ import pt.up.fe.comp.ollir.optimizations.unused_assignment_removing.UnusedAssign
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.specs.comp.ollir.Method;
 import org.specs.comp.ollir.Node;
@@ -41,20 +42,7 @@ public class JmmOptimizer implements JmmOptimization {
         System.out.println("OLLIR code:\n");
         printOllirCode(ollirCode);
 
-        OllirResult result;
-        result = new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
-        /*
-        try {
-            result = new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
-        } catch(Exception e){
-            List<Report> reports = new ArrayList<>();
-            reports.add(new Report(ReportType.ERROR, Stage.LLIR, -1, "OLLIR parse exception occurred."));
-            // Code may use a feature that's not been implemented yet and doesn't generate correct ollirCode for it
-            // TODO: Remove in the end of the project
-            result = null;
-        }*/
-
-        return result;
+        return new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
     }
 
     // Prints ollircode with indentation
@@ -84,19 +72,26 @@ public class JmmOptimizer implements JmmOptimization {
 
     @Override
     public JmmSemanticsResult optimize(JmmSemanticsResult semanticsResult) {
+        Map<String, String> config = semanticsResult.getConfig();
+        
+        if(config.getOrDefault("optimizeAll", "false").equals("true")){
+            astOptimizeAll(semanticsResult);
+        } else if(config.getOrDefault("optimize", "false").equals("true")){
+            astOptimizeBasic(semanticsResult);
+        } 
+
+        return semanticsResult;
+    }
+
+    private void astOptimizeAll(JmmSemanticsResult semanticsResult){
         JmmNode rootNode = semanticsResult.getRootNode();
 
-        boolean updated = false;
-        ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
-        updated |= constantPropagationVisitor.visit(rootNode);
-
-        /*
+        boolean updated;
         do {
             updated = false;
 
             ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
             updated |= constantPropagationVisitor.visit(rootNode);
-
             System.out.println("c prop. " + updated);
             
             ConstantFoldingVisitor constantFoldingVisitor = new ConstantFoldingVisitor();
@@ -104,11 +99,14 @@ public class JmmOptimizer implements JmmOptimization {
 
             System.out.println("c fold. " + updated);
         } while(updated);
-
+    
         UnusedAssignmentRemoverVisitor unusedAssignmentRemoverVisitor = new UnusedAssignmentRemoverVisitor(semanticsResult.getSymbolTable());
-        unusedAssignmentRemoverVisitor.visit(rootNode);*/
+        unusedAssignmentRemoverVisitor.visit(rootNode);
+    }
 
-        return semanticsResult;
+    private void astOptimizeBasic(JmmSemanticsResult semanticsResult){
+        ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
+        constantPropagationVisitor.visit(semanticsResult.getRootNode());
     }
 
     @Override

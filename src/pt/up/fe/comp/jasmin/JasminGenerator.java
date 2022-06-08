@@ -142,11 +142,12 @@ public class JasminGenerator {
 
         // method instructions
         method.buildVarTable();
+        /*
         try {
             method.outputCFG();
         } catch (OllirErrorException e) {
             e.printStackTrace();
-        }
+        }*/
         Instruction lastInstruction = null;
         for (Instruction instruction : method.getInstructions()) {
             result.append(this.getCode(instruction, method.getVarTable(), method.getLabels(instruction)));

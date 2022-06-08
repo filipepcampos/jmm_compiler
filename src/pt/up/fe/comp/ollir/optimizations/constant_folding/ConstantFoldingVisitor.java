@@ -31,11 +31,7 @@ public class ConstantFoldingVisitor extends AJmmVisitor<Boolean, Boolean> {
 
     private Boolean visitMethodDeclaration(JmmNode node, String methodSignature){
         ConstantFoldingMethodVisitor visitor = new ConstantFoldingMethodVisitor(methodSignature);
-        Optional<Integer> result = visitor.visit(node);
-
-        if(result.isPresent()){
-            return result.get() > 0;
-        }
-        return false;
+        visitor.visit(node, true);
+        return visitor.wasUpdated();
     }
 }

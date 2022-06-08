@@ -28,8 +28,8 @@ public class Launcher {
         SpecsLogs.info("Executing with args: " + Arrays.toString(args));
 
         // read the input code
-        if (args.length != 1) {
-            throw new RuntimeException("Expected a single argument, a path to an existing input file.");
+        if (args.length < 1) {
+            throw new RuntimeException("Expected at least one argument, a path to an existing input file.");
         }
         File inputFile = new File(args[0]);
         if (!inputFile.isFile()) {
@@ -42,8 +42,18 @@ public class Launcher {
         Map<String, String> config = new HashMap<>();
         config.put("inputFile", args[0]);
         config.put("optimize", "false");
+        config.put("optimizeAll", "false");
         config.put("registerAllocation", "-1");
         config.put("debug", "false");
+
+        for(int i = 1; i < args.length; ++i){
+            if(args[i].equals("-o")){
+                config.put("optimize", "true");
+            }
+            if(args[i].equals("-a")){
+                config.put("optimizeAll", "true");
+            }
+        }
 
         // Instantiate JmmParser
         SimpleParser parser = new SimpleParser();
@@ -92,22 +102,24 @@ public class Launcher {
         JmmOptimization optimizer = new JmmOptimizer();
 
         // AST optimization
-        JmmSemanticsResult semanticsOptimizationResult = optimizer.optimize(analysisResult);
+        analysisResult = optimizer.optimize(analysisResult);
 
         // AST to OLLIR
-        OllirResult ollirResult = optimizer.toOllir(semanticsOptimizationResult);
+        OllirResult ollirResult = optimizer.toOllir(analysisResult);
         if(ollirResult == null){
             System.out.println("Program finished due to error in conversion to ollir.");
             return;
         }
 
         // OLLIR optimization
-        OllirResult ollirOptimizationResult = optimizer.optimize(ollirResult);
-        TestUtils.noErrors(ollirOptimizationResult);
+        ollirResult = optimizer.optimize(ollirResult);
+    
+        TestUtils.noErrors(ollirResult);
+        ollirResult.getOllirClass().buildCFGs();
 
         // OLLIR to Jasmin
         OllirToJasmin converter = new OllirToJasmin();
-        JasminResult result = converter.toJasmin(ollirOptimizationResult);
+        JasminResult result = converter.toJasmin(ollirResult);
 
         result.compile();
         result.run();

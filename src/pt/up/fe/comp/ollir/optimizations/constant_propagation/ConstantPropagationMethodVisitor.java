@@ -9,11 +9,9 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.JmmNodeImpl;
 
 public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boolean> {
-    String methodSignature;
     Map<String, JmmNode> constantMap;
 
-    public ConstantPropagationMethodVisitor(String methodSignature){
-        this.methodSignature = methodSignature;
+    public ConstantPropagationMethodVisitor(){
         this.constantMap = new HashMap<>();
 
         addVisit(AstNode.ID, this::visitId);
@@ -34,22 +32,20 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
     private boolean visitAssignment(JmmNode node, Boolean dummy){
         String name = node.get("name");
         JmmNode childNode = node.getJmmChild(0);
-        visit(childNode);
+        boolean childUpdated = visit(childNode);
         childNode = node.getJmmChild(0);
         String childNodeKind = childNode.getKind();
         if(childNodeKind.equals("IntLiteral") || childNodeKind.equals("Bool")){
-            System.out.println("Setting " + name + ": " + childNode);
             JmmNode newNode = new JmmNodeImpl(childNodeKind);
             newNode.put("value", childNode.get("value"));
             childNode.getOptional("type").ifPresent(t -> newNode.put("type", t));
             constantMap.put(name, newNode);
         } else {
             if(constantMap.containsKey(name)){
-                System.out.println("Unsetting " + name);
                 constantMap.remove(name);
             }
         }
-        return false;
+        return childUpdated;
     }
 
     private boolean visitId(JmmNode node, Boolean dummy){
@@ -87,13 +83,16 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
 
     private boolean visitWhileStatement(JmmNode node, Boolean dummy){
         JmmNode conditionChild = node.getJmmChild(0);
+        JmmNode conditionValueChild = conditionChild.getJmmChild(0);
         JmmNode statements = node.getJmmChild(1);
 
-        if(conditionChild.getKind().equals("Id")){
-            String name = conditionChild.get("name");
-            if(this.constantMap.containsKey(name) && !containsVariableUsage(statements, name)){
-                visit(conditionChild); // This will swap the node with a const
-                return true;
+        if(conditionValueChild.getKind().equals("Id")){
+            String name = conditionValueChild.get("name");
+            if(this.constantMap.containsKey(name)){
+                if(!containsVariableUsage(statements, name)){ // Variable is not altered inside the while
+                    visit(conditionChild); // This will swap the node with a const
+                    return true;
+                }  
             }
         }
         return false; // TODO: Should while statementscope receive constant propagation?

@@ -8,11 +8,9 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.JmmNodeImpl;
 
 public class ConstantFoldingMethodVisitor extends AJmmVisitor<Boolean, Optional<Integer>> {
-    String methodSignature;
     Boolean updated;
 
-    public ConstantFoldingMethodVisitor(String methodSignature){
-        this.methodSignature = methodSignature;
+    public ConstantFoldingMethodVisitor(){
         this.updated = false;
         
         addVisit(AstNode.INT_LITERAL, this::visitIntLiteral);
@@ -72,11 +70,9 @@ public class ConstantFoldingMethodVisitor extends AJmmVisitor<Boolean, Optional<
         Optional<Integer> firstChild = visit(node.getJmmChild(0));
         Optional<Integer> secondChild = visit(node.getJmmChild(1));
 
-        System.out.println(node + "->" + node.getJmmChild(0) + " -> " + node.getJmmChild(1));
         if(firstChild.isEmpty() || secondChild.isEmpty()){
             return Optional.empty();
         }
-        System.out.println("simplifying");
 
         JmmNode newNode = null;
         Integer value = 0;

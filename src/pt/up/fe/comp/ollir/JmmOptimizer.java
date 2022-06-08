@@ -11,6 +11,7 @@ import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp.ollir.optimizations.constant_folding.ConstantFoldingMethodVisitor;
 import pt.up.fe.comp.ollir.optimizations.constant_folding.ConstantFoldingVisitor;
 import pt.up.fe.comp.ollir.optimizations.constant_propagation.ConstantPropagationVisitor;
+import pt.up.fe.comp.ollir.optimizations.if_while_removal.IfWhileRemoverVisitor;
 import pt.up.fe.comp.ollir.optimizations.unused_assignment_removing.UnusedAssignmentRemoverVisitor;
 
 import java.util.ArrayList;
@@ -87,21 +88,32 @@ public class JmmOptimizer implements JmmOptimization {
         JmmNode rootNode = semanticsResult.getRootNode();
 
         boolean updated;
+        int i = 1;
         do {
             updated = false;
 
+            System.out.println("\nOptimization round " + i);
             ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
-            updated |= constantPropagationVisitor.visit(rootNode);
-            System.out.println("c prop. " + updated);
+            boolean result = constantPropagationVisitor.visit(rootNode);
+            updated |= result;
+            System.out.println("Constant propagation - " + result);
             
             ConstantFoldingVisitor constantFoldingVisitor = new ConstantFoldingVisitor();
-            updated |= constantFoldingVisitor.visit(rootNode);
+            result = constantFoldingVisitor.visit(rootNode);
+            updated |= result;
+            System.out.println("Constant folding - " + result);
 
-            System.out.println("c fold. " + updated);
+            IfWhileRemoverVisitor ifWhileRemoverVisitor = new IfWhileRemoverVisitor();
+            result = ifWhileRemoverVisitor.visit(rootNode);
+            updated |= result;
+            System.out.println("If/While removal - " + result);
+
+            i++;
         } while(updated);
     
         UnusedAssignmentRemoverVisitor unusedAssignmentRemoverVisitor = new UnusedAssignmentRemoverVisitor(semanticsResult.getSymbolTable());
-        unusedAssignmentRemoverVisitor.visit(rootNode);
+        boolean result = unusedAssignmentRemoverVisitor.visit(rootNode);
+        System.out.println("Unused Assignments removal - " + result);
     }
 
     private void astOptimizeBasic(JmmSemanticsResult semanticsResult){

@@ -6,8 +6,8 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 
 public class ConstantPropagationVisitor extends AJmmVisitor<Boolean, Boolean> {
     public ConstantPropagationVisitor(){
-        addVisit(AstNode.MAIN_METHOD_DECLARATION, this::visitMainMethodDeclaration);
-        addVisit(AstNode.INSTANCE_METHOD_DECLARATION, this::visitInstanceMethodDeclaration);
+        addVisit(AstNode.MAIN_METHOD_DECLARATION, this::visitMethodDeclaration);
+        addVisit(AstNode.INSTANCE_METHOD_DECLARATION, this::visitMethodDeclaration);
         setDefaultVisit(this::defaultVisit);
     }
 
@@ -19,15 +19,8 @@ public class ConstantPropagationVisitor extends AJmmVisitor<Boolean, Boolean> {
         return updated;
     }
 
-    private Boolean visitMainMethodDeclaration(JmmNode node, Boolean dummy){
-        ConstantPropagationMethodVisitor visitor = new ConstantPropagationMethodVisitor("main");
+    private Boolean visitMethodDeclaration(JmmNode node, Boolean dummy){
+        ConstantPropagationMethodVisitor visitor = new ConstantPropagationMethodVisitor();
         return visitor.visit(node, true);
     }
-
-    private Boolean visitInstanceMethodDeclaration(JmmNode node, Boolean dummy){
-        String methodSignature = node.get("name");
-        ConstantPropagationMethodVisitor visitor = new ConstantPropagationMethodVisitor(methodSignature);
-        return visitor.visit(node, true);
-    }
-    
 }

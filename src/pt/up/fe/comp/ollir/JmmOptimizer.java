@@ -7,6 +7,7 @@ import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.report.Stage;
+import pt.up.fe.comp.ollir.optimizations.constant_propagation.ConstantPropagationVisitor;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,6 +80,8 @@ public class JmmOptimizer implements JmmOptimization {
 
     @Override
     public JmmSemanticsResult optimize(JmmSemanticsResult semanticsResult) {
+        ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
+        constantPropagationVisitor.visit(semanticsResult.getRootNode());
         return semanticsResult;
     }
 

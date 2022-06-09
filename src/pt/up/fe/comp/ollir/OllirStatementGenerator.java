@@ -8,6 +8,7 @@ import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.ArrayList;
 
 public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, OllirStatement> {
@@ -379,15 +380,25 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         
 
         JmmNode conditionNode = node.getJmmChild(0);
+
+        Optional<String> doWhileAnnotation = node.getOptional("doWhile");
+        Boolean doWhile = doWhileAnnotation.isPresent() && doWhileAnnotation.get().equals("true");
         JmmNode bodyNode = node.getJmmChild(1);
 
         OllirStatement conditionStatement = visit(conditionNode, hint);
         OllirStatement bodyStatement = visit(bodyNode, hint);
 
         code.append("loop").append(labelCounter).append(": \n");
-        code.append(conditionStatement.getCodeBefore())
-            .append(String.format("if(%s) goto endLoop%d;\n", conditionStatement.getResultVariable(), labelCounter));
-        code.append(bodyStatement.getCodeBefore()).append(String.format("goto loop%d;\n endLoop%d:\n", labelCounter, labelCounter));
+        if(doWhile){
+            code.append(bodyStatement.getCodeBefore());
+            code.append(conditionStatement.getCodeBefore())
+                .append(String.format("if(!.bool %s) goto loop%d;\n", conditionStatement.getResultVariable(), labelCounter));
+        } else {
+            code.append(conditionStatement.getCodeBefore())
+                .append(String.format("if(%s) goto endLoop%d;\n", conditionStatement.getResultVariable(), labelCounter));
+            code.append(bodyStatement.getCodeBefore()).append(String.format("goto loop%d;\n endLoop%d:\n", labelCounter, labelCounter));
+        }
+
         labelCounter++;
 
         return new OllirStatement(code.toString(),"" );

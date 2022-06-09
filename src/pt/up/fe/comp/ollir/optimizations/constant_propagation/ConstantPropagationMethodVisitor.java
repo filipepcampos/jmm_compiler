@@ -2,6 +2,7 @@ package pt.up.fe.comp.ollir.optimizations.constant_propagation;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
@@ -95,6 +96,14 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
                 }  
             }
         }
+
+        ConditionVisitor conditionVisitor = new ConditionVisitor(constantMap);
+        Optional<Integer> result = conditionVisitor.visit(conditionValueChild);
+        result.ifPresent(i -> {
+            if(i == 1){
+                node.put("doWhile", "true");
+            }
+        });
         return false; // TODO: Should while statementscope receive constant propagation?
     }
 

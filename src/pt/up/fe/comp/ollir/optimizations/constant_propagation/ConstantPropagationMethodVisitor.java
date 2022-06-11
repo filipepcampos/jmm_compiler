@@ -3,6 +3,7 @@ package pt.up.fe.comp.ollir.optimizations.constant_propagation;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Map.Entry;
 
 import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
@@ -19,6 +20,7 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
         addVisit(AstNode.ASSIGNMENT, this::visitAssignment);
         addVisit(AstNode.CLASS_METHOD, this::visitClassMethod);
         addVisit(AstNode.WHILE_STATEMENT, this::visitWhileStatement);
+        addVisit(AstNode.IF_STATEMENT, this::visitIfStatement);
         setDefaultVisit(this::defaultVisit);
     }
 
@@ -104,7 +106,43 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
                 node.put("doWhile", "true");
             }
         });
-        return false; // TODO: Should while statementscope receive constant propagation?
+
+        /* TODO: Basically remove all used local variables from the map
+         * while(i < 0){
+         *   a += 1; // Remove from map
+         *   i += 1; // Remove from map
+         *  // Basically: Remove used local variables
+         * }
+        */
+        return false;
+    }
+
+    private boolean visitIfStatement(JmmNode node, Boolean dummy){
+        JmmNode conditionChild = node.getJmmChild(0);
+        boolean updated = visit(conditionChild);
+
+        Map<String, JmmNode> ifConstantMap = new HashMap<>();
+        Map<String, JmmNode> elseConstantMap = new HashMap<>();
+        ifConstantMap.putAll(this.constantMap);
+        elseConstantMap.putAll(this.constantMap);
+
+        this.constantMap = ifConstantMap;
+        updated |= visit(node.getJmmChild(1));
+        this.constantMap = elseConstantMap;
+        updated |= visit(node.getJmmChild(2));
+
+        this.constantMap = new HashMap<>();
+        for(Entry<String, JmmNode> entry : ifConstantMap.entrySet()){ // Keep only the constants that exist and have same value across the two if branches
+            if(elseConstantMap.containsKey(entry.getKey())){
+                String value1 = entry.getValue().get("value");
+                String value2 = elseConstantMap.get(entry.getKey()).get("value");
+                if(value1.equals(value2)){
+                    this.constantMap.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        return updated;
     }
 
     private boolean containsVariableUsage(JmmNode node, String variableName){

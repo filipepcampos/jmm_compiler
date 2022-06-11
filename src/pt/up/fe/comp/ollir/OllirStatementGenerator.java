@@ -68,7 +68,14 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             code.append(stmt.getResultVariable()).append(";\n");
         } else {
             symbol = findField(name);
-            OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(symbol.getType()), hint.getMethodSignature(), false);
+            JmmNode child = node.getJmmChild(0);
+            OllirGeneratorHint hintForChild;
+            if(child.getKind().equals("ArrayInitialization")){
+                hintForChild = new OllirGeneratorHint(OllirUtils.getCode(symbol.getType()), hint.getMethodSignature(), true);
+            } else {
+                hintForChild = new OllirGeneratorHint(OllirUtils.getCode(symbol.getType()), hint.getMethodSignature(), false);
+            }
+            
             OllirStatement stmt = visit(node.getJmmChild(0), hintForChild);
             code.append(stmt.getCodeBefore());
             code.append("putfield(this, ").append(symbol.getName())
@@ -144,7 +151,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         return new OllirStatement(code.toString(), rhs);
     }
 
-    private OllirStatement visitUnaryOp(JmmNode node, OllirGeneratorHint hint){ // TODO: Implement
+    private OllirStatement visitUnaryOp(JmmNode node, OllirGeneratorHint hint){
         StringBuilder code = new StringBuilder();
 
         String op = node.get("op");
@@ -406,7 +413,8 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
     private OllirStatement visitLengthOp(JmmNode node, OllirGeneratorHint hint){
         StringBuilder code = new StringBuilder();
-        OllirStatement statement = visit(node.getJmmChild(0), hint); // TODO: Maybe add hint
+        OllirGeneratorHint childHint = new OllirGeneratorHint(hint.getMethodSignature(), ".i32", false);
+        OllirStatement statement = visit(node.getJmmChild(0), hint);
 
         code.append(statement.getCodeBefore());
         String rhs = "arraylength(" + statement.getResultVariable() + ").i32";
@@ -441,7 +449,6 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
 
         String arrayStmtResult = arrayStmt.getResultVariable();
-        // TODO: Deal with parameters
         String[] splitArrayStmtResult = arrayStmtResult.split("\\.");
         String arrayName = splitArrayStmtResult[0];
         // example: t0.array.i32 -> index 0 holds the name and index length-1 holds the type
@@ -460,7 +467,14 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
     private OllirStatement visitArrayInitialization(JmmNode node, OllirGeneratorHint hint){
         OllirStatement sizeStmt = visit(node.getJmmChild(0), new OllirGeneratorHint(hint.getMethodSignature(), ".i32", true));
-        return new OllirStatement(sizeStmt.getCodeBefore(), String.format("new(array, %s).array.i32", sizeStmt.getResultVariable()));
+        StringBuilder code = new StringBuilder(sizeStmt.getCodeBefore());
+
+        String rhs = String.format("new(array, %s).array.i32", sizeStmt.getResultVariable());
+        if(hint.needsTemporaryVar()){
+            String temporary = assignTemporary("array.i32", rhs, code);
+            return new OllirStatement(code.toString(), temporary);
+        }
+        return new OllirStatement(code.toString(), rhs);
     }
 
     private OllirStatement visitArrayAssignment(JmmNode node, OllirGeneratorHint hint){
@@ -491,19 +505,34 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             String lhs = String.format("%s[%s].%s", arrayName, indexVar, OllirUtils.getOllirType(symbol.getType().getName()));
             code.append(lhs)
                 .append(" :=.").append(OllirUtils.getCode(arrayElementType))
-                .append(" ");
-
-            code.append(stmt.getResultVariable()).append(";\n");
+                .append(" ")
+                .append(stmt.getResultVariable())
+                .append(";\n");
         } else {
-            // TODO:
-            /*
             symbol = findField(arrayName);
+            String ollirSymbolType = OllirUtils.getOllirType(symbol.getType().getName());
+
             Type arrayElementType = new Type(symbol.getType().getName(), false);
             OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(arrayElementType), hint.getMethodSignature(), false);
             OllirStatement stmt = visit(node.getJmmChild(1), hintForChild);
+
+            String getField = String.format("getfield(this, %s.array.%s).V", arrayName, ollirSymbolType);
+            String temporaryArrayVar = assignTemporary("array." + ollirSymbolType, getField, code);
+
+            
             code.append(stmt.getCodeBefore());
-            code.append("putfield(this, ").append(symbol.getName())
-                .append(", ").append(stmt.getResultVariable()).append(").V;\n");*/
+
+            String[] splitTemporaryArrayVar = temporaryArrayVar.split("\\."); // Split to get name without type
+
+            String lhs = String.format("%s[%s].%s", splitTemporaryArrayVar[0], indexVar, ollirSymbolType);
+            code.append(lhs)
+                .append(" :=.").append(OllirUtils.getCode(arrayElementType))
+                .append(" ")
+                .append(stmt.getResultVariable())
+                .append(";\n");
+
+            code.append("putfield(this, ").append(String.format("%s.array.%s", arrayName, ollirSymbolType))
+                .append(", ").append(temporaryArrayVar).append(").V;\n");;
         }
 
         return new OllirStatement(code.toString(), symbol.getName());

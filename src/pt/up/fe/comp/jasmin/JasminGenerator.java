@@ -1,8 +1,6 @@
 package pt.up.fe.comp.jasmin;
 
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
-import pt.up.fe.comp.jasmin.StackLimits;
-
 import java.util.HashMap;
 import java.util.List;
 
@@ -288,6 +286,8 @@ public class JasminGenerator {
     private String getCode(Instruction instruction, HashMap<String, Descriptor> varTable, List<String> labels) {
 
         //System.out.println(instruction.getInstType());  // DEBUG
+        instruction.show();
+        System.out.println(this.stackLimits);
 
         StringBuilder result = new StringBuilder();
 
@@ -400,22 +400,31 @@ public class JasminGenerator {
             return "\treturn\n";
         }
 
+        StringBuilder result = new StringBuilder();
+
         ElementType type = instruction.getOperand().getType().getTypeOfElement();
 
         switch (type) {
             case VOID:
-                return "\treturn\n";
+                result.append("\treturn\n");
+                break;
             case INT32:
             case BOOLEAN:
+                result.append(this.loadElement(instruction.getOperand(), varTable));
+                result.append("\tireturn\n");
                 this.stackLimits.update(-1);
-                return this.loadElement(instruction.getOperand(), varTable) + "\tireturn\n";
+                break;
             case ARRAYREF:
             case OBJECTREF:
+                result.append(this.loadElement(instruction.getOperand(), varTable));
+                result.append("\tareturn\n");
                 this.stackLimits.update(-1);
-                return this.loadElement(instruction.getOperand(), varTable) + "\tareturn\n";
+                break;
             default:
                 throw new RuntimeException("getCode: Unrecognized return instruction for " + type + " element type");
         }
+
+        return result.toString();
     }
 
     private String getCode(GetFieldInstruction instruction, HashMap<String, Descriptor> varTable) {
@@ -560,7 +569,6 @@ public class JasminGenerator {
             this.stackLimits.update(1);
             
             result.append(this.loadElement(arrayOperand.getIndexOperands().get(0), varTable)); // TODO: Support for multiple dimensional arrays
-            this.stackLimits.update(1);
             
             result.append("\tiaload\n");
             this.stackLimits.update(-1);
@@ -633,6 +641,14 @@ public class JasminGenerator {
         // append return type
         result.append(this.getJasminType(method.getReturnType())).append("\n");
 
+        if (method.getInvocationType() != CallType.invokestatic) {
+            this.stackLimits.update(-1);
+        }
+        this.stackLimits.update(- method.getListOfOperands().size());   // Update stack limits to consume objectref and arguments
+        if (method.getReturnType().getTypeOfElement() != ElementType.VOID) {
+            this.stackLimits.update(1);
+        }
+
         return result.toString();
     }
 
@@ -643,16 +659,13 @@ public class JasminGenerator {
         ElementType type = instruction.getFirstArg().getType().getTypeOfElement();
 
         switch (type) {
-            case ARRAYREF:
-                int size = 0;
-                for (Element element : instruction.getListOfOperands()) {
-                    result.append(this.loadElement(element, varTable));
-                    size++;
-                }
-                result.append("\tmultianewarray ").append(this.getJasminType(instruction.getReturnType())).append(" ").append(size).append("\n");
+            case ARRAYREF:                
+                result.append(this.loadElement(instruction.getListOfOperands().get(0), varTable));
+                result.append("\tnewarray int\n");  // Does not update stack limits since it'll consume size and return array reference
                 break;
             case OBJECTREF:
                 result.append("\tnew ").append(((Operand) instruction.getFirstArg()).getName()).append("\n");
+                this.stackLimits.update(1);
                 break;
             default:
                 throw new RuntimeException("getNewCode: Unrecognized new instruction for " + type + " element type");

@@ -27,4 +27,8 @@ public class StackLimits {
         this.stackSize = 0;
         this.maxStackSize = 0;
     }
+
+    public String toString() {
+        return "stackSize=" + this.stackSize + "\nmaxStackSize=" + this.maxStackSize;
+    }
 }

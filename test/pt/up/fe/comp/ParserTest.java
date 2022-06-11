@@ -37,12 +37,7 @@ public class ParserTest {
     public void helloWorld() {
         noErrors(SpecsIo.getResource("fixtures/public/HelloWorld.jmm"));
     }
-
-    @Test
-    public void debug(){
-        noErrors(SpecsIo.getResource("fixtures/public/Debug.jmm"));
-    }
-
+    
     @Test
     public void findMaximum() {
         noErrors(SpecsIo.getResource("fixtures/public/FindMaximum.jmm"));

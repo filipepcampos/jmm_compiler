@@ -56,7 +56,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
         Symbol symbol = findLocal(name);
         if(symbol != null){
-            OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(symbol.getType()), hint.getMethodSignature(), false);
+            OllirGeneratorHint hintForChild = new OllirGeneratorHint(hint.getMethodSignature(), OllirUtils.getCode(symbol.getType()), false);
             OllirStatement stmt = visit(node.getJmmChild(0), hintForChild);
             code.append(stmt.getCodeBefore());
 
@@ -396,14 +396,18 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
     private OllirStatement visitLengthOp(JmmNode node, OllirGeneratorHint hint){
         StringBuilder code = new StringBuilder();
         OllirStatement statement = visit(node.getJmmChild(0), hint); // TODO: Maybe add hint
+
         code.append(statement.getCodeBefore());
         String rhs = "arraylength(" + statement.getResultVariable() + ").i32";
-        if(hint.needsTemporaryVar()){
-            String temporary = assignTemporary("i32", rhs, code);
-            return new OllirStatement(code.toString(), temporary);
+
+        String parentKind = node.getJmmParent().getKind();
+        if(parentKind.equals("Assignment") || parentKind.equals("ArrayAssignment") ){
+            code.append(rhs);
+            return new OllirStatement(statement.getCodeBefore(), code.toString());
         }
-        code.append(rhs);
-        return new OllirStatement(statement.getCodeBefore(), code.toString());
+
+        String temporary = assignTemporary("i32", rhs, code);
+        return new OllirStatement(code.toString(), temporary);        
     }
 
     private OllirStatement visitArrayAccess(JmmNode node, OllirGeneratorHint hint){

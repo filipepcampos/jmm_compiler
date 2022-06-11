@@ -26,7 +26,7 @@ public class JasminGenerator {
         result.append(this.convertClass());
         result.append(this.convertMethods());
 
-        //System.out.println(result);     // DEBUG
+        System.out.println(result);     // DEBUG
         
         return new JasminResult(result.toString());
     }
@@ -428,7 +428,7 @@ public class JasminGenerator {
         StringBuilder result = new StringBuilder();
 
         result.append(this.loadElement(instruction.getOperand(), varTable));
-        result.append("\tineg\n");
+        result.append("\ticonst_1\nixor\n");
 
         return result.toString();
     }
@@ -468,7 +468,6 @@ public class JasminGenerator {
                 result.append("\tiand\n");
                 break;
             case NOTB:
-                result.append("\tineg\n");
                 break;
             default:
                 throw new RuntimeException("getCode: Unrecognized binary operation for " + opType + " operation type");

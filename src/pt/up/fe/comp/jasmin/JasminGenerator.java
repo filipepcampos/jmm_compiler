@@ -287,7 +287,7 @@ public class JasminGenerator {
 
     private String getCode(Instruction instruction, HashMap<String, Descriptor> varTable, List<String> labels) {
 
-        //System.out.println(instruction.getInstType());  // DEBUG
+        // DEBUG
         instruction.show();
         System.out.println(this.stackLimits);
 
@@ -343,7 +343,7 @@ public class JasminGenerator {
         if (operand instanceof ArrayOperand) {
             result.append("\taload").append(this.getVirtualReg(operand.getName(), varTable)).append("\n");
             this.stackLimits.update(1);
-            result.append(this.loadElement(((ArrayOperand) operand).getIndexOperands().get(0), varTable));  // TODO: Support for multiple dimensional arrays
+            result.append(this.loadElement(((ArrayOperand) operand).getIndexOperands().get(0), varTable));
         }
 
         Instruction rhs = instruction.getRhs();
@@ -412,8 +412,64 @@ public class JasminGenerator {
 
         StringBuilder result = new StringBuilder();
 
-        result.append(this.getCode(instruction.getCondition(), varTable, null));
-        result.append("\tifeq ").append(instruction.getLabel()).append("\n");
+        Instruction condition = instruction.getCondition();
+
+        Boolean optimization = false;
+        if (condition instanceof BinaryOpInstruction) {
+            
+            BinaryOpInstruction binaryInst = (BinaryOpInstruction) condition;
+            OperationType opType = binaryInst.getOperation().getOpType();
+
+            if (opType == OperationType.GTE || opType == OperationType.GTH || opType == OperationType.LTE || opType == OperationType.LTH) {
+                
+                Element left = binaryInst.getLeftOperand();
+                Element right = binaryInst.getRightOperand();
+
+                if (left.isLiteral() && ((LiteralElement) left).getLiteral().equals("0") && !right.isLiteral()) {
+                    
+                    result.append(this.loadElement(right, varTable));
+                    
+                    switch (binaryInst.getOperation().getOpType()) {
+                        case GTE:
+                            result.append("\tifgt "); break;
+                        case GTH:
+                            result.append("\tifge "); break;
+                        case LTE:
+                            result.append("\tiflt "); break;
+                        case LTH:
+                            result.append("\tifle "); break;
+                    }
+
+                    optimization = true;
+                }
+    
+                if (!left.isLiteral() && right.isLiteral() && ((LiteralElement) right).getLiteral().equals("0")) {
+                    
+                    result.append(this.loadElement(left, varTable));
+                    
+                    switch (binaryInst.getOperation().getOpType()) {
+                        case GTE:
+                            result.append("\tiflt "); break;
+                        case GTH:
+                            result.append("\tifle "); break;
+                        case LTE:
+                            result.append("\tifgt "); break;
+                        case LTH:
+                            result.append("\tifge "); break;
+                    }
+
+                    optimization = true;
+                }
+            }     
+        } 
+        
+        if (!optimization) {
+            result.append(this.getCode(instruction.getCondition(), varTable, null));
+            result.append("\tifeq ");
+        }
+
+        result.append(instruction.getLabel()).append("\n");
+
         this.stackLimits.update(-1);
 
         return result.toString();

@@ -101,8 +101,11 @@ public class Launcher {
             System.out.println("Program finished due to error in conversion to ollir.");
             return;
         }
+
         //var optimizationResult = optimizer.optimize(analysisResult);
         TestUtils.noErrors(ollirResult);
+
+        //OllirResult ollirResult = new OllirResult(input, config);
 
         // OLLIR to Jasmin
         OllirToJasmin converter = new OllirToJasmin();

@@ -117,8 +117,11 @@ public class JmmOptimizer implements JmmOptimization {
     }
 
     private void astOptimizeBasic(JmmSemanticsResult semanticsResult){
-        ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
-        constantPropagationVisitor.visit(semanticsResult.getRootNode());
+        boolean updated = false;
+        do {
+            ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
+            updated = constantPropagationVisitor.visit(semanticsResult.getRootNode());
+        } while(updated);
     }
 
     @Override

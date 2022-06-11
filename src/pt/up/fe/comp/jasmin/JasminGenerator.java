@@ -3,6 +3,8 @@ package pt.up.fe.comp.jasmin;
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import org.specs.comp.ollir.*;
 
@@ -137,9 +139,9 @@ public class JasminGenerator {
         // method instructions
         this.stackLimits.reset();
         String instructions = this.convertMethodInstructions(method);
-        if (!this.stackLimits.isEmpty()) {
+        /* if (!this.stackLimits.isEmpty()) {
             throw new RuntimeException("convertMethod: Stack isn't empty at the end of method declaration");
-        }
+        } */
 
         // method limits
         String limits = this.convertMethodLimits(method);
@@ -339,13 +341,36 @@ public class JasminGenerator {
 
         Operand operand = (Operand) instruction.getDest();
         if (operand instanceof ArrayOperand) {
-            result.append("\taload ").append(varTable.get(operand.getName()).getVirtualReg()).append("\n");
+            result.append("\taload").append(this.getVirtualReg(operand.getName(), varTable)).append("\n");
             this.stackLimits.update(1);
             result.append(this.loadElement(((ArrayOperand) operand).getIndexOperands().get(0), varTable));  // TODO: Support for multiple dimensional arrays
         }
 
+        Instruction rhs = instruction.getRhs();
+        
+        // iinc
+        if (rhs.getInstType() == InstructionType.BINARYOPER &&
+            ((BinaryOpInstruction) rhs).getOperation().getOpType() == OperationType.ADD) {
+            
+            BinaryOpInstruction iincInst = (BinaryOpInstruction) rhs;
+            Element leftOperand = iincInst.getLeftOperand();
+            Element rightOperand = iincInst.getRightOperand();
+            
+            if (leftOperand.isLiteral() && !rightOperand.isLiteral() && ((Operand) rightOperand).getName().equals(operand.getName())) {
+                result.append("\tiinc ").append(varTable.get(((Operand) rightOperand).getName()).getVirtualReg()).append(" ");
+                result.append(((LiteralElement) leftOperand).getLiteral()).append("\n");
+                return result.toString();
+            }
+
+            if (rightOperand.isLiteral() && !leftOperand.isLiteral() && ((Operand) leftOperand).getName().equals(operand.getName())) {
+                result.append("\tiinc ").append(varTable.get(((Operand) leftOperand).getName()).getVirtualReg()).append(" ");
+                result.append(((LiteralElement) rightOperand).getLiteral()).append("\n");
+                return result.toString();
+            }
+        }
+
         // deal with value of right hand side of instruction first
-        result.append(this.getCode(instruction.getRhs(), varTable, null));
+        result.append(this.getCode(rhs, varTable, null));
         
         // store the value
         result.append(this.storeElement(operand, varTable));
@@ -545,12 +570,12 @@ public class JasminGenerator {
             case INT32:
             case BOOLEAN:
                 this.stackLimits.update(-1);
-                return "\tistore " + varTable.get(operand.getName()).getVirtualReg() + "\n";
+                return "\tistore" + this.getVirtualReg(operand.getName(), varTable) + "\n";
             case OBJECTREF:
             case STRING:
             case ARRAYREF:
                 this.stackLimits.update(-1);
-                return "\tastore " + varTable.get(operand.getName()).getVirtualReg() + "\n";
+                return "\tastore" + this.getVirtualReg(operand.getName(), varTable) + "\n";
             default:
                 throw new RuntimeException("storeElement: Unrecognized operand type " + operand.getType());
         }
@@ -561,11 +586,17 @@ public class JasminGenerator {
         StringBuilder result = new StringBuilder();
 
         if (element instanceof LiteralElement) {
-            result.append("\tldc ").append(((LiteralElement) element).getLiteral()).append("\n");
+            int n = Integer.parseInt(((LiteralElement) element).getLiteral());
+            if (-128 <= n && n <= 127) {
+                result.append("\tbipush ");
+            } else {
+                result.append("ldc ");
+            }
+            result.append(n).append("\n");
             this.stackLimits.update(1);
         } else if (element instanceof ArrayOperand) {
             ArrayOperand arrayOperand = (ArrayOperand) element;
-            result.append("\taload ").append(varTable.get(arrayOperand.getName()).getVirtualReg()).append("\n");
+            result.append("\taload").append(this.getVirtualReg(arrayOperand.getName(), varTable)).append("\n");
             this.stackLimits.update(1);
             
             result.append(this.loadElement(arrayOperand.getIndexOperands().get(0), varTable)); // TODO: Support for multiple dimensional arrays
@@ -582,13 +613,13 @@ public class JasminGenerator {
                     break;
                 case INT32:
                 case BOOLEAN:
-                    result.append("\tiload ").append(varTable.get(operand.getName()).getVirtualReg()).append("\n");
+                    result.append("\tiload").append(this.getVirtualReg(operand.getName(), varTable)).append("\n");
                     this.stackLimits.update(1);
                     break;
                 case OBJECTREF:
                 case ARRAYREF:
                 case STRING:
-                    result.append("\taload ").append(varTable.get(operand.getName()).getVirtualReg()).append("\n");
+                    result.append("\taload").append(this.getVirtualReg(operand.getName(), varTable)).append("\n");
                     this.stackLimits.update(1);
                     break;
                 case CLASS:     // this happens in invokestatic
@@ -672,5 +703,10 @@ public class JasminGenerator {
         }
 
         return result.toString();
+    }
+
+    private String getVirtualReg(String name, HashMap<String, Descriptor> varTable) {
+        int virtualReg = varTable.get(name).getVirtualReg();
+        return (virtualReg > 3 ? " " : "_") + virtualReg;
     }
 }

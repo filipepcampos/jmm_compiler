@@ -354,7 +354,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         JmmNode ifNode = node.getJmmChild(1);
         JmmNode elseNode = node.getJmmChild(2);
 
-        OllirStatement conditionStatement = visit(conditionNode, hint);
+        OllirStatement conditionStatement = visit(conditionNode, new OllirGeneratorHint(hint.getMethodSignature(), "bool", false));
         OllirStatement ifStatement = visit(ifNode, hint);
         OllirStatement elseStatement = visit(elseNode, hint);
 
@@ -369,7 +369,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
     }
 
     private OllirStatement visitCondition(JmmNode node, OllirGeneratorHint hint){
-        OllirStatement stmt = visit(node.getJmmChild(0), new OllirGeneratorHint(methodSignature, "bool", true));
+        OllirStatement stmt = visit(node.getJmmChild(0), hint);
         return new OllirStatement(stmt.getCodeBefore(), stmt.getResultVariable());
     }
 
@@ -392,7 +392,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         Boolean doWhile = doWhileAnnotation.isPresent() && doWhileAnnotation.get().equals("true");
         JmmNode bodyNode = node.getJmmChild(1);
 
-        OllirStatement conditionStatement = visit(conditionNode, hint);
+        OllirStatement conditionStatement = visit(conditionNode, new OllirGeneratorHint(hint.getMethodSignature(), "bool", doWhile ? true : false));
         OllirStatement bodyStatement = visit(bodyNode, hint);
 
         code.append("loop").append(labelCounter).append(": \n");

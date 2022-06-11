@@ -587,10 +587,14 @@ public class JasminGenerator {
 
         if (element instanceof LiteralElement) {
             int n = Integer.parseInt(((LiteralElement) element).getLiteral());
-            if (-128 <= n && n <= 127) {
+            if (0 <= n && n <= 5) {
+                result.append("\ticonst_");
+            } else if (-128 <= n && n <= 127) {
                 result.append("\tbipush ");
+            } else if (-32768 <= n && n <= 32767) {
+                result.append("\tsipush ");
             } else {
-                result.append("ldc ");
+                result.append("\tldc ");
             }
             result.append(n).append("\n");
             this.stackLimits.update(1);

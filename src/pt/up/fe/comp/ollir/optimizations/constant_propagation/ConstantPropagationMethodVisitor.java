@@ -1,6 +1,8 @@
 package pt.up.fe.comp.ollir.optimizations.constant_propagation;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Map.Entry;
@@ -9,6 +11,7 @@ import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.JmmNodeImpl;
+import pt.up.fe.comp.ollir.optimizations.constant_folding.AssignedIdsCollector;
 
 public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boolean> {
     Map<String, JmmNode> constantMap;
@@ -107,14 +110,19 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
             }
         });
 
-        /* TODO: Basically remove all used local variables from the map
-         * while(i < 0){
-         *   a += 1; // Remove from map
-         *   i += 1; // Remove from map
-         *  // Basically: Remove used local variables
-         * }
-        */
-        return false;
+        AssignedIdsCollector usedAssignmentsCollector = new AssignedIdsCollector();
+        List<String> assignments = new ArrayList<>();
+        usedAssignmentsCollector.visit(statements, assignments);
+        for(String id : assignments){
+            this.constantMap.remove(id);
+        }
+
+        Map<String, JmmNode> backupConstantMap = new HashMap<>();
+        backupConstantMap.putAll(this.constantMap);
+        boolean updated = this.visit(statements);
+        this.constantMap = backupConstantMap; // 
+
+        return updated;
     }
 
     private boolean visitIfStatement(JmmNode node, Boolean dummy){

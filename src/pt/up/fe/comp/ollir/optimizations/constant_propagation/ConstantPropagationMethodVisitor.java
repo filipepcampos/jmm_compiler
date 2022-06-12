@@ -7,17 +7,23 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Map.Entry;
 
+
 import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.JmmNodeImpl;
+import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.ollir.optimizations.constant_folding.AssignedIdsCollector;
 
 public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boolean> {
     Map<String, JmmNode> constantMap;
+    SymbolTable symbolTable;
+    String methodSignature;
 
-    public ConstantPropagationMethodVisitor(){
+    public ConstantPropagationMethodVisitor(SymbolTable symbolTable, String methodSignature){
         this.constantMap = new HashMap<>();
+        this.symbolTable = symbolTable;
+        this.methodSignature = methodSignature;
 
         addVisit(AstNode.ID, this::visitId);
         addVisit(AstNode.ASSIGNMENT, this::visitAssignment);
@@ -84,6 +90,19 @@ public class ConstantPropagationMethodVisitor extends AJmmVisitor<Boolean, Boole
                 }
             }
         }
+        for(var symbol : this.symbolTable.getFields()){
+            boolean existsLocalVar = false;
+            for(var localVar : this.symbolTable.getLocalVariables(this.methodSignature)){
+                if(symbol.getName().equals(localVar.getName())){
+                    existsLocalVar = true;
+                    continue;
+                }
+            }
+            if(!existsLocalVar){
+                this.constantMap.remove(symbol.getName());
+            }
+        }
+
         return updated;
     }
 

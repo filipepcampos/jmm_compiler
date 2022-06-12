@@ -93,7 +93,7 @@ public class JmmOptimizer implements JmmOptimization {
             updated = false;
 
             System.out.println("\nOptimization round " + i);
-            ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
+            ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor(semanticsResult.getSymbolTable());
             boolean result = constantPropagationVisitor.visit(rootNode);
             updated |= result;
             System.out.println("Constant propagation - " + result);
@@ -119,7 +119,7 @@ public class JmmOptimizer implements JmmOptimization {
     private void astOptimizeBasic(JmmSemanticsResult semanticsResult){
         boolean updated = false;
         do {
-            ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor();
+            ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor(semanticsResult.getSymbolTable());
             updated = constantPropagationVisitor.visit(semanticsResult.getRootNode());
         } while(updated);
     }

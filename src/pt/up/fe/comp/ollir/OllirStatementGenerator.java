@@ -516,7 +516,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
             OllirGeneratorHint hintForChild = new OllirGeneratorHint(OllirUtils.getCode(arrayElementType), hint.getMethodSignature(), false);
             OllirStatement stmt = visit(node.getJmmChild(1), hintForChild);
 
-            String getField = String.format("getfield(this, %s.array.%s).V", arrayName, ollirSymbolType);
+            String getField = String.format("getfield(this, %s.array.%s).array.%s", arrayName, ollirSymbolType, ollirSymbolType);
             String temporaryArrayVar = assignTemporary("array." + ollirSymbolType, getField, code);
 
             

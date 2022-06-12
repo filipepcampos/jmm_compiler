@@ -26,6 +26,7 @@ public class UnusedAssignmentRemoverMethodVisitor extends AJmmVisitor<Boolean, B
 
         addVisit(AstNode.ID, this::visitId);
         addVisit(AstNode.ASSIGNMENT, this::visitAssignment);
+        addVisit(AstNode.ARRAY_ASSIGNMENT, this::visitArrayAssignment);
         setDefaultVisit(this::defaultVisit);
     }
 
@@ -44,6 +45,15 @@ public class UnusedAssignmentRemoverMethodVisitor extends AJmmVisitor<Boolean, B
     }
 
     private boolean visitId(JmmNode node, Boolean dummy){
+        String name = node.get("name");
+        
+        if(usageMap.containsKey(name)){
+            usageMap.put(name, true);
+        }
+        return true;
+    }
+
+    private boolean visitArrayAssignment(JmmNode node, Boolean dummy){
         String name = node.get("name");
         
         if(usageMap.containsKey(name)){

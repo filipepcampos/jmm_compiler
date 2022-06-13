@@ -65,6 +65,7 @@ public class GraphColoringSolver {
             }
             
             Set<Integer> usedColors = new HashSet<>();
+            System.out.println("Stack removing node " + node.getId());
             for (var succ : node.getSuccessors()){
                 if(this.colors.containsKey(succ)){
                     usedColors.add(this.colors.get(succ));
@@ -79,6 +80,7 @@ public class GraphColoringSolver {
                 color++;
             }
             
+            System.out.println("Coloring with " + color);
             this.colors.put(node, color);
             this.variableColorMap.put(name, color);
         }

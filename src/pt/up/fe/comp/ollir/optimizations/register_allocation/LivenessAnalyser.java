@@ -1,6 +1,7 @@
 package pt.up.fe.comp.ollir.optimizations.register_allocation;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,41 +34,17 @@ public class LivenessAnalyser {
     private HashMap<String, Set<Set<Integer>>> webs;
     
     public LivenessAnalyser(Node beginNode){
-        nodesList = new ArrayList<>();
-        useList = new ArrayList<>();
-        defList = new ArrayList<>();
-        inList = new ArrayList<>();
-        outList = new ArrayList<>();
+        this.nodesList = new ArrayList<>();
+        this.useList = new ArrayList<>();
+        this.defList = new ArrayList<>();
+        this.inList = new ArrayList<>();
+        this.outList = new ArrayList<>();
+        this.webs = new HashMap<>();
 
         this.addNode(beginNode);
         this.initNodes();
-        this.debugPrint();
         this.livenessAnalyse();
-    }
-
-    private void debugPrint() {// TODO Remove
-        System.out.println("LivenessAnalyser: ");
-        for(int i = 0; i < nodesList.size(); ++i){
-            System.out.print(((Instruction) nodesList.get(i)).getId());
-            System.out.print(" - use:{");
-            for(var u : useList.get(i)){
-                System.out.print(u + ", ");
-            }
-            System.out.print("} def:{");
-            for(var d : defList.get(i)){
-                System.out.print(d + ", ");
-            }
-            System.out.print("} in:{");
-            for(var j : inList.get(i)){
-                System.out.print(j + ", ");
-            }
-            System.out.print("} out:{");
-            for(var o : outList.get(i)){
-                System.out.print(o + ", ");
-            }
-            System.out.println("}");
-        }
-        System.out.println("\n");
+        this.createWebs();
     }
 
     private void addNode(Node node){
@@ -188,19 +165,6 @@ public class LivenessAnalyser {
     }
 
     private void livenessAnalyse() {
-
-        /*
-        for each n
-            in[n] <- {}; out[n] <- {}
-        repeat
-            for each n
-                in’[n] <- in[n]; out’[n] <- out[n]
-                out[n] <- U succ in[s]
-
-                in[n] <- use[n] U (out[n] – def[n])
-        until in’[n] = in[n] and out’[n] = out[n] for all n
-        */
-       
         boolean updated;
         do{
             updated = false;
@@ -233,7 +197,6 @@ public class LivenessAnalyser {
                 this.inList.set(i, newIn);
                 this.outList.set(i, newOut);
             }
-            this.debugPrint();
         } while(updated);
     }
 
@@ -242,14 +205,106 @@ public class LivenessAnalyser {
             for(int i = 0; i < this.nodesList.size(); ++i){
                 Node node = nodesList.get(i);
                 Set<String> def = this.defList.get(i);
-                Set<String> out = this.outList.get(i);
                 Set<Integer> web = new HashSet<>();
                 if (def.contains(entry.getKey())){
-                    web.add(i);
-                    if (out.contains(entry.getKey())){
-                        for (Node succ : node.getSuccessors()){
-                            // Iterate nodes
+                    this.propagateWeb(node, web, entry.getKey());
+                    entry.getValue().add(web);
+                }
+            }
+
+            System.out.print(entry.getKey() + " - ");
+            for(var w : entry.getValue()){
+                System.out.print("{");
+                for(var k : w){
+                    System.out.print(k + ", ");
+                }
+                System.out.print("}");
+            }
+            System.out.println();
+            
+            
+            boolean updated;
+            List<Set<Integer>> webs = new ArrayList<>(entry.getValue());
+            do {
+                updated = false;
+                Set<Set<Integer>> killSet = new HashSet<>();
+                
+                for(int i = 0; i < webs.size(); ++i){
+                    Set<Integer> firstWeb = webs.get(i);
+                    for(int j = i + 1; j < webs.size(); ++j){
+                        Set<Integer> secondWeb = webs.get(j);
+                        if(!Collections.disjoint(firstWeb, secondWeb)){
+                            secondWeb.addAll(firstWeb);
+                            killSet.add(firstWeb);
+                            updated = true;
                         }
+                    }
+                }
+                for(var w : killSet){
+                    webs.remove(w);
+                }
+            } while(updated);
+            this.webs.put(entry.getKey(), new HashSet<>(webs));
+
+            /*
+            boolean updated;
+            do {
+                updated = false;
+                Set<Set<Integer>> newWebs = new HashSet<>();
+                for(var web : this.webs.get(entry.getKey())){
+                    if(newWebs.isEmpty()){
+                        newWebs.add(web);
+                    } else {
+                        for(var newWeb : newWebs){
+                            if(!Collections.disjoint(web, newWeb)){
+                                newWeb.addAll(web);
+                                updated = true;
+                                break;
+                            }
+                        }
+                        if (!updated){
+                            newWebs.add(web);
+                        }
+                    }
+                }
+                this.webs.put(entry.getKey(), newWebs);
+            } while(updated);*/
+        }
+        
+        for(var entry : this.webs.entrySet()){
+            System.out.print(entry.getKey() + " - ");
+            for(var w : entry.getValue()){
+                System.out.print("{");
+                for(var k : w){
+                    System.out.print(k + ", ");
+                }
+                System.out.print("}");
+            }
+            System.out.println();
+        }
+    }
+    
+    public Set<Pair<Set<Integer>, String>> getWebs(){
+        Set<Pair<Set<Integer>, String>> webs = new HashSet<>();
+        for(var entry : this.webs.entrySet()){
+            int id = 0;
+            for(var web : entry.getValue()){
+                webs.add(new Pair<>(web, entry.getKey() + "-" + id++));
+            }
+        }
+        return webs;
+    }
+
+    private void propagateWeb(Node node, Set<Integer> web, String variable){
+        int nodeIndex = this.nodesList.indexOf(node);
+        if(node.getNodeType() == NodeType.INSTRUCTION && !web.contains(node.getId())){
+            boolean inOut = this.outList.get(nodeIndex).contains(variable);
+            boolean used = this.useList.get(nodeIndex).contains(variable);
+            if(used || inOut){
+                web.add(node.getId());
+                if(inOut){
+                    for(Node succ : node.getSuccessors()){
+                        this.propagateWeb(succ, web, variable);
                     }
                 }
             }

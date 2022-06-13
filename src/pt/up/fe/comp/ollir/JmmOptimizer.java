@@ -12,6 +12,8 @@ import pt.up.fe.comp.ollir.optimizations.constant_folding.ConstantFoldingMethodV
 import pt.up.fe.comp.ollir.optimizations.constant_folding.ConstantFoldingVisitor;
 import pt.up.fe.comp.ollir.optimizations.constant_propagation.ConstantPropagationVisitor;
 import pt.up.fe.comp.ollir.optimizations.if_while_removal.IfWhileRemoverVisitor;
+import pt.up.fe.comp.ollir.optimizations.register_allocation.GraphColoringSolver;
+import pt.up.fe.comp.ollir.optimizations.register_allocation.InterferenceGraphCreator;
 import pt.up.fe.comp.ollir.optimizations.register_allocation.LivenessAnalyser;
 import pt.up.fe.comp.ollir.optimizations.unused_assignment_removing.UnusedAssignmentRemoverVisitor;
 
@@ -138,6 +140,9 @@ public class JmmOptimizer implements JmmOptimization {
             }
             Node node = method.getBeginNode();  // TODO: Cast to instruction
             LivenessAnalyser livenessAnalyser = new LivenessAnalyser(node);
+            InterferenceGraphCreator interferenceGraphCreator = new InterferenceGraphCreator(livenessAnalyser.getWebs());
+            GraphColoringSolver graphColoringSolver = new GraphColoringSolver(interferenceGraphCreator.createGraph(), 10);
+            graphColoringSolver.solve();
         }
 
         return ollirResult;

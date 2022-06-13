@@ -369,7 +369,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
     }
 
     private OllirStatement visitCondition(JmmNode node, OllirGeneratorHint hint){
-        OllirStatement stmt = visit(node.getJmmChild(0), hint);
+        OllirStatement stmt = visit(node.getJmmChild(0), new OllirGeneratorHint(methodSignature, "bool", false));
         return new OllirStatement(stmt.getCodeBefore(), stmt.getResultVariable());
     }
 

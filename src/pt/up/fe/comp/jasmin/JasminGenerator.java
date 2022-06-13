@@ -6,6 +6,8 @@ import java.io.IOError;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import org.specs.comp.ollir.*;
 
@@ -14,11 +16,13 @@ public class JasminGenerator {
     private final ClassUnit classUnit;
     private String superClass;
     private int numberCond;
+    private StackLimits stackLimits;
 
     public JasminGenerator(ClassUnit classUnit) {
         this.classUnit = classUnit;
         this.superClass = null;
         this.numberCond = 0;
+        this.stackLimits = new StackLimits();
     }
 
     public JasminResult convert() {
@@ -132,13 +136,8 @@ public class JasminGenerator {
 
         if (method.isConstructMethod()) return "";
 
-        StringBuilder result = new StringBuilder();
-
         // method header
-        result.append(this.convertMethodHeader(method));
-
-        // method limits
-        result.append(this.convertMethodLimits(method));
+        String header = this.convertMethodHeader(method);
 
         // method instructions
         method.buildVarTable();
@@ -154,15 +153,13 @@ public class JasminGenerator {
             lastInstruction = instruction;
         }
 
-        // append return if method return type is void
-        if (lastInstruction == null || (lastInstruction.getInstType() != InstructionType.RETURN && method.getReturnType().getTypeOfElement() == ElementType.VOID)) {
-            result.append("\treturn\n");
-        }
+        // method limits
+        String limits = this.convertMethodLimits(method);
 
         // method end directive
-        result.append(".end method\n");
+        String endDirective = ".end method\n";
 
-        return result.toString();
+        return header + limits + instructions + endDirective;
     }
 
     private String convertMethodHeader(Method method) {
@@ -201,13 +198,35 @@ public class JasminGenerator {
         return result.toString();
     }
 
+    private String convertMethodInstructions(Method method) {
+
+        StringBuilder result = new StringBuilder();
+
+        method.buildVarTable();
+        Instruction lastInstruction = null;
+        for (Instruction instruction : method.getInstructions()) {
+            result.append(this.getCode(instruction, method.getVarTable(), method.getLabels(instruction)));
+            lastInstruction = instruction;
+        }
+
+        // append return if method return type is void
+        if (lastInstruction == null || (lastInstruction.getInstType() != InstructionType.RETURN && method.getReturnType().getTypeOfElement() == ElementType.VOID)) {
+            result.append("\treturn\n");
+        }
+
+        return result.toString();
+    }
+
     private String convertMethodLimits(Method method) {
         /*
         .limit stack 99
         .limit locals 99
         */
-        int localsSize = method.getVarTable().size() + (method.isStaticMethod() || method.getVarTable().containsKey("this") ? 0 : 1);
-        return "\t.limit stack 99\n\t.limit locals " + localsSize + "\n";
+
+        int stackLimit = this.stackLimits.getMaxStackSize();
+        int localsLimit = method.getVarTable().size() + (method.isStaticMethod() || method.getVarTable().containsKey("this") ? 0 : 1);
+
+        return "\t.limit stack " + stackLimit + "\n\t.limit locals " + localsLimit + "\n";
     }
 
     public String getFullyQualifiedName(String className) {
@@ -278,7 +297,9 @@ public class JasminGenerator {
 
     private String getCode(Instruction instruction, HashMap<String, Descriptor> varTable, List<String> labels) {
 
-        //System.out.println(instruction.getInstType());  // DEBUG
+        // DEBUG
+        instruction.show();
+        System.out.println(this.stackLimits);
 
         StringBuilder result = new StringBuilder();
 
@@ -330,12 +351,36 @@ public class JasminGenerator {
 
         Operand operand = (Operand) instruction.getDest();
         if (operand instanceof ArrayOperand) {
-            result.append("\taload ").append(varTable.get(operand.getName()).getVirtualReg()).append("\n");
-            result.append(this.loadElement(((ArrayOperand) operand).getIndexOperands().get(0), varTable));  // TODO: Support for multiple dimensional arrays
+            result.append("\taload").append(this.getVirtualReg(operand.getName(), varTable)).append("\n");
+            this.stackLimits.update(1);
+            result.append(this.loadElement(((ArrayOperand) operand).getIndexOperands().get(0), varTable));
+        }
+
+        Instruction rhs = instruction.getRhs();
+        
+        // iinc
+        if (rhs.getInstType() == InstructionType.BINARYOPER &&
+            ((BinaryOpInstruction) rhs).getOperation().getOpType() == OperationType.ADD) {
+            
+            BinaryOpInstruction iincInst = (BinaryOpInstruction) rhs;
+            Element leftOperand = iincInst.getLeftOperand();
+            Element rightOperand = iincInst.getRightOperand();
+            
+            if (leftOperand.isLiteral() && !rightOperand.isLiteral() && ((Operand) rightOperand).getName().equals(operand.getName())) {
+                result.append("\tiinc ").append(varTable.get(((Operand) rightOperand).getName()).getVirtualReg()).append(" ");
+                result.append(((LiteralElement) leftOperand).getLiteral()).append("\n");
+                return result.toString();
+            }
+
+            if (rightOperand.isLiteral() && !leftOperand.isLiteral() && ((Operand) leftOperand).getName().equals(operand.getName())) {
+                result.append("\tiinc ").append(varTable.get(((Operand) leftOperand).getName()).getVirtualReg()).append(" ");
+                result.append(((LiteralElement) rightOperand).getLiteral()).append("\n");
+                return result.toString();
+            }
         }
 
         // deal with value of right hand side of instruction first
-        result.append(this.getCode(instruction.getRhs(), varTable, null));
+        result.append(this.getCode(rhs, varTable, null));
         
         // store the value
         result.append(this.storeElement(operand, varTable));
@@ -358,7 +403,8 @@ public class JasminGenerator {
                 result.append(this.getNewCode(method, varTable));
                 break;
             case arraylength:
-                result.append(this.loadElement(method.getFirstArg(), varTable)).append("\tarraylength\n");
+                result.append(this.loadElement(method.getFirstArg(), varTable));
+                result.append("\tarraylength\n");   // Does not update stack limits since it consumes the array reference and returns its length
                 break;
             case ldc:
                 result.append(this.loadElement(method.getFirstArg(), varTable));
@@ -376,8 +422,65 @@ public class JasminGenerator {
 
         StringBuilder result = new StringBuilder();
 
-        result.append(this.getCode(instruction.getCondition(), varTable, null));
-        result.append("\tifeq ").append(instruction.getLabel()).append("\n");
+        Instruction condition = instruction.getCondition();
+
+        Boolean optimization = false;
+        if (condition instanceof BinaryOpInstruction) {
+            
+            BinaryOpInstruction binaryInst = (BinaryOpInstruction) condition;
+            OperationType opType = binaryInst.getOperation().getOpType();
+
+            if (opType == OperationType.GTE || opType == OperationType.GTH || opType == OperationType.LTE || opType == OperationType.LTH) {
+                
+                Element left = binaryInst.getLeftOperand();
+                Element right = binaryInst.getRightOperand();
+
+                if (left.isLiteral() && ((LiteralElement) left).getLiteral().equals("0") && !right.isLiteral()) {
+                    
+                    result.append(this.loadElement(right, varTable));
+                    
+                    switch (binaryInst.getOperation().getOpType()) {
+                        case GTE:
+                            result.append("\tifgt "); break;
+                        case GTH:
+                            result.append("\tifge "); break;
+                        case LTE:
+                            result.append("\tiflt "); break;
+                        case LTH:
+                            result.append("\tifle "); break;
+                    }
+
+                    optimization = true;
+                }
+    
+                if (!left.isLiteral() && right.isLiteral() && ((LiteralElement) right).getLiteral().equals("0")) {
+                    
+                    result.append(this.loadElement(left, varTable));
+                    
+                    switch (binaryInst.getOperation().getOpType()) {
+                        case GTE:
+                            result.append("\tiflt "); break;
+                        case GTH:
+                            result.append("\tifle "); break;
+                        case LTE:
+                            result.append("\tifgt "); break;
+                        case LTH:
+                            result.append("\tifge "); break;
+                    }
+
+                    optimization = true;
+                }
+            }     
+        } 
+        
+        if (!optimization) {
+            result.append(this.getCode(instruction.getCondition(), varTable, null));
+            result.append("\tifeq ");
+        }
+
+        result.append(instruction.getLabel()).append("\n");
+
+        this.stackLimits.update(-1);
 
         return result.toString();
     }
@@ -388,20 +491,31 @@ public class JasminGenerator {
             return "\treturn\n";
         }
 
+        StringBuilder result = new StringBuilder();
+
         ElementType type = instruction.getOperand().getType().getTypeOfElement();
 
         switch (type) {
             case VOID:
-                return "\treturn\n";
+                result.append("\treturn\n");
+                break;
             case INT32:
             case BOOLEAN:
-                return this.loadElement(instruction.getOperand(), varTable) + "\tireturn\n";
+                result.append(this.loadElement(instruction.getOperand(), varTable));
+                result.append("\tireturn\n");
+                this.stackLimits.update(-1);
+                break;
             case ARRAYREF:
             case OBJECTREF:
-                return this.loadElement(instruction.getOperand(), varTable) + "\tareturn\n";
+                result.append(this.loadElement(instruction.getOperand(), varTable));
+                result.append("\tareturn\n");
+                this.stackLimits.update(-1);
+                break;
             default:
                 throw new RuntimeException("getCode: Unrecognized return instruction for " + type + " element type");
         }
+
+        return result.toString();
     }
 
     private String getCode(GetFieldInstruction instruction, HashMap<String, Descriptor> varTable) {
@@ -409,7 +523,7 @@ public class JasminGenerator {
         StringBuilder result = new StringBuilder();
 
         result.append(this.loadElement(instruction.getFirstOperand(), varTable));
-        result.append("\tgetfield ");
+        result.append("\tgetfield ");   // Does not update stack limits since it consumes the obj reference and returns value
         result.append(this.getElementClass(instruction.getFirstOperand())).append("/");
         result.append(((Operand) instruction.getSecondOperand()).getName()).append(" ");
         result.append(this.getJasminType(((Operand) instruction.getSecondOperand()).getType())).append("\n");
@@ -424,6 +538,7 @@ public class JasminGenerator {
         result.append(this.loadElement(instruction.getFirstOperand(), varTable));
         result.append(this.loadElement(instruction.getThirdOperand(), varTable));
         result.append("\tputfield ");
+        this.stackLimits.update(-2);
         result.append(this.getElementClass(instruction.getFirstOperand())).append("/");
         result.append(((Operand) instruction.getSecondOperand()).getName()).append(" ");
         result.append(this.getJasminType(((Operand) instruction.getSecondOperand()).getType())).append("\n");
@@ -436,7 +551,10 @@ public class JasminGenerator {
         StringBuilder result = new StringBuilder();
 
         result.append(this.loadElement(instruction.getOperand(), varTable));
-        result.append("\ticonst_1\nixor\n");
+        result.append("\ticonst_1\n");
+        this.stackLimits.update(1);
+        result.append("\tixor\n");
+        this.stackLimits.update(-1);
 
         return result.toString();
     }
@@ -453,27 +571,38 @@ public class JasminGenerator {
         switch (opType) {
             case ADD:
                 result.append("\tiadd\n");
+                this.stackLimits.update(-1);
                 break;
             case SUB:
                 result.append("\tisub\n");
+                this.stackLimits.update(-1);
                 break;
             case MUL:
                 result.append("\timul\n");
+                this.stackLimits.update(-1);
                 break;
             case DIV:
                 result.append("\tidiv\n");
+                this.stackLimits.update(-1);
                 break;
             case LTH:
                 result.append("\tif_icmplt ").append(this.getCondTrueLabel()).append("\n");
-                result.append("\ticonst_0\n");
+                this.stackLimits.update(-2);
+
+                result.append("\ticonst_0\n");  // Does not update stack limits since we'll either push 0 or 1
+
                 result.append("\tgoto ").append(this.getCondFalseLabel()).append("\n");
                 result.append(this.getCondTrueLabel()).append(":\n");
+
                 result.append("\ticonst_1\n");
+                this.stackLimits.update(1);
+
                 result.append(this.getCondFalseLabel()).append(":\n");
                 this.numberCond++;
                 break;
             case ANDB:
                 result.append("\tiand\n");
+                this.stackLimits.update(-1);
                 break;
             case NOTB:
                 break;
@@ -499,17 +628,20 @@ public class JasminGenerator {
     private String storeElement(Operand operand, HashMap<String, Descriptor> varTable) {
 
         if (operand instanceof ArrayOperand) {
+            this.stackLimits.update(-3);
             return "\tiastore\n";
         }
 
         switch (operand.getType().getTypeOfElement()) {
             case INT32:
             case BOOLEAN:
-                return "\tistore " + varTable.get(operand.getName()).getVirtualReg() + "\n";
+                this.stackLimits.update(-1);
+                return "\tistore" + this.getVirtualReg(operand.getName(), varTable) + "\n";
             case OBJECTREF:
             case STRING:
             case ARRAYREF:
-                return "\tastore " + varTable.get(operand.getName()).getVirtualReg() + "\n";
+                this.stackLimits.update(-1);
+                return "\tastore" + this.getVirtualReg(operand.getName(), varTable) + "\n";
             default:
                 throw new RuntimeException("storeElement: Unrecognized operand type " + operand.getType());
         }
@@ -520,27 +652,45 @@ public class JasminGenerator {
         StringBuilder result = new StringBuilder();
 
         if (element instanceof LiteralElement) {
-            result.append("\tldc ").append(((LiteralElement) element).getLiteral()).append("\n");
+            int n = Integer.parseInt(((LiteralElement) element).getLiteral());
+            if (0 <= n && n <= 5) {
+                result.append("\ticonst_");
+            } else if (-128 <= n && n <= 127) {
+                result.append("\tbipush ");
+            } else if (-32768 <= n && n <= 32767) {
+                result.append("\tsipush ");
+            } else {
+                result.append("\tldc ");
+            }
+            result.append(n).append("\n");
+            this.stackLimits.update(1);
         } else if (element instanceof ArrayOperand) {
             ArrayOperand arrayOperand = (ArrayOperand) element;
-            result.append("\taload ").append(varTable.get(arrayOperand.getName()).getVirtualReg()).append("\n");
+            result.append("\taload").append(this.getVirtualReg(arrayOperand.getName(), varTable)).append("\n");
+            this.stackLimits.update(1);
+            
             result.append(this.loadElement(arrayOperand.getIndexOperands().get(0), varTable)); // TODO: Support for multiple dimensional arrays
+            
             result.append("\tiaload\n");
+            this.stackLimits.update(-1);
         } else if (element instanceof Operand) {
             Operand operand = (Operand) element;
             ElementType type = operand.getType().getTypeOfElement();
             switch (type) {
                 case THIS:
                     result.append("\taload_0\n");
+                    this.stackLimits.update(1);
                     break;
                 case INT32:
                 case BOOLEAN:
-                    result.append("\tiload ").append(varTable.get(operand.getName()).getVirtualReg()).append("\n");
+                    result.append("\tiload").append(this.getVirtualReg(operand.getName(), varTable)).append("\n");
+                    this.stackLimits.update(1);
                     break;
                 case OBJECTREF:
                 case ARRAYREF:
                 case STRING:
-                    result.append("\taload ").append(varTable.get(operand.getName()).getVirtualReg()).append("\n");
+                    result.append("\taload").append(this.getVirtualReg(operand.getName(), varTable)).append("\n");
+                    this.stackLimits.update(1);
                     break;
                 case CLASS:     // this happens in invokestatic
                     break;
@@ -592,6 +742,14 @@ public class JasminGenerator {
         // append return type
         result.append(this.getJasminType(method.getReturnType())).append("\n");
 
+        if (method.getInvocationType() != CallType.invokestatic) {
+            this.stackLimits.update(-1);
+        }
+        this.stackLimits.update(- method.getListOfOperands().size());   // Update stack limits to consume objectref and arguments
+        if (method.getReturnType().getTypeOfElement() != ElementType.VOID) {
+            this.stackLimits.update(1);
+        }
+
         return result.toString();
     }
 
@@ -602,21 +760,23 @@ public class JasminGenerator {
         ElementType type = instruction.getFirstArg().getType().getTypeOfElement();
 
         switch (type) {
-            case ARRAYREF:
-                int size = 0;
-                for (Element element : instruction.getListOfOperands()) {
-                    result.append(this.loadElement(element, varTable));
-                    size++;
-                }
-                result.append("\tmultianewarray ").append(this.getJasminType(instruction.getReturnType())).append(" ").append(size).append("\n");
+            case ARRAYREF:                
+                result.append(this.loadElement(instruction.getListOfOperands().get(0), varTable));
+                result.append("\tnewarray int\n");  // Does not update stack limits since it'll consume size and return array reference
                 break;
             case OBJECTREF:
                 result.append("\tnew ").append(((Operand) instruction.getFirstArg()).getName()).append("\n");
+                this.stackLimits.update(1);
                 break;
             default:
                 throw new RuntimeException("getNewCode: Unrecognized new instruction for " + type + " element type");
         }
 
         return result.toString();
+    }
+
+    private String getVirtualReg(String name, HashMap<String, Descriptor> varTable) {
+        int virtualReg = varTable.get(name).getVirtualReg();
+        return (virtualReg > 3 ? " " : "_") + virtualReg;
     }
 }

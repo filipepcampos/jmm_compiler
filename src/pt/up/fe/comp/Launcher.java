@@ -117,6 +117,8 @@ public class Launcher {
         TestUtils.noErrors(ollirResult);
         ollirResult.getOllirClass().buildCFGs();
 
+        //OllirResult ollirResult = new OllirResult(input, config);
+
         // OLLIR to Jasmin
         OllirToJasmin converter = new OllirToJasmin();
         JasminResult result = converter.toJasmin(ollirResult);

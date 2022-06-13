@@ -1,13 +1,8 @@
 package pt.up.fe.comp.jasmin;
 
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
-
-import java.io.IOError;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 import org.specs.comp.ollir.*;
 
@@ -140,17 +135,10 @@ public class JasminGenerator {
         String header = this.convertMethodHeader(method);
 
         // method instructions
-        method.buildVarTable();
-        /*
-        try {
-            method.outputCFG();
-        } catch (OllirErrorException e) {
-            e.printStackTrace();
-        }*/
-        Instruction lastInstruction = null;
-        for (Instruction instruction : method.getInstructions()) {
-            result.append(this.getCode(instruction, method.getVarTable(), method.getLabels(instruction)));
-            lastInstruction = instruction;
+        this.stackLimits.reset();
+        String instructions = this.convertMethodInstructions(method);
+        if (!this.stackLimits.isEmpty()) {
+            throw new RuntimeException("convertMethod: Stack isn't empty at the end of method declaration");
         }
 
         // method limits
@@ -298,8 +286,8 @@ public class JasminGenerator {
     private String getCode(Instruction instruction, HashMap<String, Descriptor> varTable, List<String> labels) {
 
         // DEBUG
-        instruction.show();
-        System.out.println(this.stackLimits);
+        /* instruction.show();
+        System.out.println(this.stackLimits); */
 
         StringBuilder result = new StringBuilder();
 

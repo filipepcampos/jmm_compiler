@@ -12,6 +12,7 @@ import pt.up.fe.comp.ollir.optimizations.constant_folding.ConstantFoldingMethodV
 import pt.up.fe.comp.ollir.optimizations.constant_folding.ConstantFoldingVisitor;
 import pt.up.fe.comp.ollir.optimizations.constant_propagation.ConstantPropagationVisitor;
 import pt.up.fe.comp.ollir.optimizations.if_while_removal.IfWhileRemoverVisitor;
+import pt.up.fe.comp.ollir.optimizations.register_allocation.LivenessAnalyser;
 import pt.up.fe.comp.ollir.optimizations.unused_assignment_removing.UnusedAssignmentRemoverVisitor;
 
 import java.util.ArrayList;
@@ -127,9 +128,7 @@ public class JmmOptimizer implements JmmOptimization {
     @Override
     public OllirResult optimize(OllirResult ollirResult) {
         // DEBUG TODO: Remove
-         
-        ollirResult.getOllirClass().buildCFGs();
-        /*
+        
         for (Method method : ollirResult.getOllirClass().getMethods()) {
             method.buildCFG();
             try {
@@ -138,7 +137,8 @@ public class JmmOptimizer implements JmmOptimization {
                 e.printStackTrace();
             }
             Node node = method.getBeginNode();  // TODO: Cast to instruction
-        }*/
+            LivenessAnalyser livenessAnalyser = new LivenessAnalyser(node);
+        }
 
         return ollirResult;
     }

@@ -1,6 +1,9 @@
 package pt.up.fe.comp.jasmin;
 
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
+
+import java.io.IOError;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collector;
@@ -137,11 +140,18 @@ public class JasminGenerator {
         String header = this.convertMethodHeader(method);
 
         // method instructions
-        this.stackLimits.reset();
-        String instructions = this.convertMethodInstructions(method);
-        /* if (!this.stackLimits.isEmpty()) {
-            throw new RuntimeException("convertMethod: Stack isn't empty at the end of method declaration");
-        } */
+        method.buildVarTable();
+        /*
+        try {
+            method.outputCFG();
+        } catch (OllirErrorException e) {
+            e.printStackTrace();
+        }*/
+        Instruction lastInstruction = null;
+        for (Instruction instruction : method.getInstructions()) {
+            result.append(this.getCode(instruction, method.getVarTable(), method.getLabels(instruction)));
+            lastInstruction = instruction;
+        }
 
         // method limits
         String limits = this.convertMethodLimits(method);

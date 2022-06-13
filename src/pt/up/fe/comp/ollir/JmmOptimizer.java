@@ -2,15 +2,26 @@ package pt.up.fe.comp.ollir;
 
 import pt.up.fe.comp.TestUtils;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
+import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.report.Stage;
+import pt.up.fe.comp.ollir.optimizations.constant_folding.ConstantFoldingMethodVisitor;
+import pt.up.fe.comp.ollir.optimizations.constant_folding.ConstantFoldingVisitor;
+import pt.up.fe.comp.ollir.optimizations.constant_propagation.ConstantPropagationVisitor;
+import pt.up.fe.comp.ollir.optimizations.if_while_removal.IfWhileRemoverVisitor;
+import pt.up.fe.comp.ollir.optimizations.unused_assignment_removing.UnusedAssignmentRemoverVisitor;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+
+import org.specs.comp.ollir.Method;
+import org.specs.comp.ollir.Node;
+import org.specs.comp.ollir.OllirErrorException;
 
 public class JmmOptimizer implements JmmOptimization {
     @Override
@@ -32,20 +43,7 @@ public class JmmOptimizer implements JmmOptimization {
         System.out.println("OLLIR code:\n");
         printOllirCode(ollirCode);
 
-        OllirResult result;
-        result = new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
-        /*
-        try {
-            result = new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
-        } catch(Exception e){
-            List<Report> reports = new ArrayList<>();
-            reports.add(new Report(ReportType.ERROR, Stage.LLIR, -1, "OLLIR parse exception occurred."));
-            // Code may use a feature that's not been implemented yet and doesn't generate correct ollirCode for it
-            // TODO: Remove in the end of the project
-            result = null;
-        }*/
-
-        return result;
+        return new OllirResult(semanticsResult, ollirCode, Collections.emptyList());
     }
 
     // Prints ollircode with indentation
@@ -71,5 +69,77 @@ public class JmmOptimizer implements JmmOptimization {
             if(c == '{')
                 indent++;
         }
+    }
+
+    @Override
+    public JmmSemanticsResult optimize(JmmSemanticsResult semanticsResult) {
+        Map<String, String> config = semanticsResult.getConfig();
+        
+        if(config.getOrDefault("optimizeAll", "false").equals("true")){
+            astOptimizeAll(semanticsResult);
+        } else if(config.getOrDefault("optimize", "false").equals("true")){
+            astOptimizeBasic(semanticsResult);
+        } 
+
+        return semanticsResult;
+    }
+
+    private void astOptimizeAll(JmmSemanticsResult semanticsResult){
+        JmmNode rootNode = semanticsResult.getRootNode();
+
+        boolean updated;
+        int i = 1;
+        do {
+            updated = false;
+
+            System.out.println("\nOptimization round " + i);
+            ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor(semanticsResult.getSymbolTable());
+            boolean result = constantPropagationVisitor.visit(rootNode);
+            updated |= result;
+            System.out.println("Constant propagation - " + result);
+            
+            ConstantFoldingVisitor constantFoldingVisitor = new ConstantFoldingVisitor();
+            result = constantFoldingVisitor.visit(rootNode);
+            updated |= result;
+            System.out.println("Constant folding - " + result);
+
+            IfWhileRemoverVisitor ifWhileRemoverVisitor = new IfWhileRemoverVisitor();
+            result = ifWhileRemoverVisitor.visit(rootNode);
+            updated |= result;
+            System.out.println("If/While removal - " + result);
+
+            i++;
+        } while(updated);
+    
+        UnusedAssignmentRemoverVisitor unusedAssignmentRemoverVisitor = new UnusedAssignmentRemoverVisitor(semanticsResult.getSymbolTable());
+        boolean result = unusedAssignmentRemoverVisitor.visit(rootNode);
+        System.out.println("Unused Assignments removal - " + result);
+    }
+
+    private void astOptimizeBasic(JmmSemanticsResult semanticsResult){
+        boolean updated = false;
+        do {
+            ConstantPropagationVisitor constantPropagationVisitor = new ConstantPropagationVisitor(semanticsResult.getSymbolTable());
+            updated = constantPropagationVisitor.visit(semanticsResult.getRootNode());
+        } while(updated);
+    }
+
+    @Override
+    public OllirResult optimize(OllirResult ollirResult) {
+        // DEBUG TODO: Remove
+         
+        ollirResult.getOllirClass().buildCFGs();
+        /*
+        for (Method method : ollirResult.getOllirClass().getMethods()) {
+            method.buildCFG();
+            try {
+                method.outputCFG();
+            } catch(OllirErrorException e){
+                e.printStackTrace();
+            }
+            Node node = method.getBeginNode();  // TODO: Cast to instruction
+        }*/
+
+        return ollirResult;
     }
 }

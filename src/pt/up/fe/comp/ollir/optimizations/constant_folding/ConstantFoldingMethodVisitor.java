@@ -59,7 +59,7 @@ public class ConstantFoldingMethodVisitor extends AJmmVisitor<Boolean, Optional<
         if(optional.isPresent()){
             node.removeJmmChild(child);
             JmmNode newChild = new JmmNodeImpl("Bool");
-            newChild.put("value",  Integer.toString(1 - optional.get())); // !
+            newChild.put("value",  optional.get() == 1 ? "false" : "true"); // !
             node.replace(newChild);
             updated = true;
         }

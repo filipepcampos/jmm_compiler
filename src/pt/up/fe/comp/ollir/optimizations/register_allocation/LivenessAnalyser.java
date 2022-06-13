@@ -1,8 +1,10 @@
 package pt.up.fe.comp.ollir.optimizations.register_allocation;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.specs.comp.ollir.AssignInstruction;
@@ -22,13 +24,13 @@ import org.specs.comp.ollir.UnaryOpInstruction;
 import org.specs.comp.ollir.ReturnInstruction;
 import org.specs.comp.ollir.SingleOpInstruction;
 
-
 public class LivenessAnalyser {
     private List<Node> nodesList;
     private List<Set<String>> useList;
     private List<Set<String>> defList;
     private List<Set<String>> inList;
     private List<Set<String>> outList;
+    private HashMap<String, Set<Set<Integer>>> webs;
     
     public LivenessAnalyser(Node beginNode){
         nodesList = new ArrayList<>();
@@ -88,7 +90,9 @@ public class LivenessAnalyser {
                 Set<String> def = new HashSet<>();
                 if (instruction instanceof AssignInstruction) {
                     AssignInstruction assignInstruction = (AssignInstruction) instruction;
-                    def.add(((Operand) assignInstruction.getDest()).getName());
+                    String variableName = ((Operand) assignInstruction.getDest()).getName();
+                    def.add(variableName);
+                    this.webs.put(variableName, new HashSet<>());   // Everytime a variable is defined a new entry in webs is created
                 }
                 defList.add(def);
 
@@ -234,6 +238,21 @@ public class LivenessAnalyser {
     }
 
     private void createWebs(){
-        
+        for (var entry : this.webs.entrySet()) {
+            for(int i = 0; i < this.nodesList.size(); ++i){
+                Node node = nodesList.get(i);
+                Set<String> def = this.defList.get(i);
+                Set<String> out = this.outList.get(i);
+                Set<Integer> web = new HashSet<>();
+                if (def.contains(entry.getKey())){
+                    web.add(i);
+                    if (out.contains(entry.getKey())){
+                        for (Node succ : node.getSuccessors()){
+                            // Iterate nodes
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -3,21 +3,15 @@ package pt.up.fe.comp;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import com.javacc.parser.ParseException;
 
 import pt.up.fe.comp.analysis.JmmAnalyser;
-import pt.up.fe.comp.analysis.table.SymbolTableBuilder;
-import pt.up.fe.comp.analysis.table.SymbolTableCollector;
 import pt.up.fe.comp.jasmin.OllirToJasmin;
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
+import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
-import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -34,8 +28,8 @@ public class Launcher {
         SpecsLogs.info("Executing with args: " + Arrays.toString(args));
 
         // read the input code
-        if (args.length != 1) {
-            throw new RuntimeException("Expected a single argument, a path to an existing input file.");
+        if (args.length < 1) {
+            throw new RuntimeException("Expected at least one argument, a path to an existing input file.");
         }
         File inputFile = new File(args[0]);
         if (!inputFile.isFile()) {
@@ -48,8 +42,18 @@ public class Launcher {
         Map<String, String> config = new HashMap<>();
         config.put("inputFile", args[0]);
         config.put("optimize", "false");
+        config.put("optimizeAll", "false");
         config.put("registerAllocation", "-1");
         config.put("debug", "false");
+
+        for(int i = 1; i < args.length; ++i){
+            if(args[i].equals("-o")){
+                config.put("optimize", "true");
+            }
+            if(args[i].equals("-a")){
+                config.put("optimizeAll", "true");
+            }
+        }
 
         // Instantiate JmmParser
         SimpleParser parser = new SimpleParser();
@@ -94,15 +98,24 @@ public class Launcher {
             return;
         }
 
+        // Optimizer
+        JmmOptimization optimizer = new JmmOptimizer();
+
+        // AST optimization
+        analysisResult = optimizer.optimize(analysisResult);
+
         // AST to OLLIR
-        JmmOptimizer optimizer = new JmmOptimizer();
         OllirResult ollirResult = optimizer.toOllir(analysisResult);
         if(ollirResult == null){
             System.out.println("Program finished due to error in conversion to ollir.");
             return;
         }
-        //var optimizationResult = optimizer.optimize(analysisResult);
+
+        // OLLIR optimization
+        ollirResult = optimizer.optimize(ollirResult);
+    
         TestUtils.noErrors(ollirResult);
+        ollirResult.getOllirClass().buildCFGs();
 
         // OLLIR to Jasmin
         OllirToJasmin converter = new OllirToJasmin();

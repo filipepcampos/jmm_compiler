@@ -202,26 +202,16 @@ public class LivenessAnalyser {
     private void createWebs(){
         System.out.println("Creating webs " + this.nodesList.size());
         for (var entry : this.webs.entrySet()) {
+            int webId = 0;
             for(int i = 0; i < this.nodesList.size(); ++i){
                 Node node = nodesList.get(i);
                 Set<String> def = this.defList.get(i);
-                Web web = new Web(entry.getKey(), 0);
                 if (def.contains(entry.getKey())){
+                    Web web = new Web(entry.getKey(), webId++);
                     this.propagateWeb(node, web);
                     entry.getValue().add(web);
                 }
             }
-
-            System.out.print(entry.getKey() + " - ");
-            for(var w : entry.getValue()){
-                System.out.print("{");
-                for(var k : w.getInstructions()){
-                    System.out.print(k + ", ");
-                }
-                System.out.print("}");
-            }
-            System.out.println();
-            
             
             boolean updated;
             List<Web> webList = new ArrayList<>(entry.getValue());
@@ -264,6 +254,9 @@ public class LivenessAnalyser {
         Set<Web> webs = new HashSet<>();
         for(var entry : this.webs.entrySet()){
             webs.addAll(entry.getValue());
+        }
+        for(Web w : webs){
+            System.out.println("Web " + w.toString() + " {" + w.getInstructions() + "}");
         }
         return webs;
     }

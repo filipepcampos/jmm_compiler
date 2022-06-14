@@ -46,6 +46,7 @@ public class GraphColoringSolver {
 
     public boolean solve() {
         Stack<Pair<Node, String>> stack = new Stack<>();
+        System.out.println("Solving graph coloring there's " + this.nodes.size() + " nodes.");
         for(var node : this.nodes){
             if(node.first.getSuccessors().size() >= this.numberOfColors){
                 return false;

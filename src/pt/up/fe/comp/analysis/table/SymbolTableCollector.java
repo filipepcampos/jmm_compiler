@@ -2,14 +2,19 @@ package pt.up.fe.comp.analysis.table;
 import pt.up.fe.comp.ast.AstNode;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
+import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class SymbolTableCollector extends AJmmVisitor<SymbolTableBuilder, Boolean> {
+    List<Report> reports;
 
     public SymbolTableCollector() {
+        this.reports = new ArrayList<>();
         addVisit(AstNode.PROGRAM, this::visitProgram);
         addVisit(AstNode.IMPORT_DECL, this::visitImportDecl);
         addVisit(AstNode.CLASS_DECLARATION, this::visitClassDeclaration);
@@ -60,6 +65,11 @@ public class SymbolTableCollector extends AJmmVisitor<SymbolTableBuilder, Boolea
     private Boolean visitMethodDeclaration(JmmNode methodDeclaration, SymbolTableBuilder symbolTable) {
         MethodCollector collector = new MethodCollector(methodDeclaration);
         symbolTable.addMethod(collector.getMethod());
+        this.reports.addAll(collector.getReports());
         return true;
+    }
+
+    public List<Report> getReports(){
+        return this.reports;
     }
 }

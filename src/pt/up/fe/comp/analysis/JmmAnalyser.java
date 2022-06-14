@@ -19,7 +19,7 @@ public class JmmAnalyser implements JmmAnalysis {
         SymbolTableCollector collector = new SymbolTableCollector();
         collector.visit(parserResult.getRootNode(), symbolTable);
 
-        List<Report> reports = new ArrayList<>();
+        List<Report> reports = collector.getReports();
 
         TypeCheckVisitor analysisVisitor = new TypeCheckVisitor(symbolTable);
         analysisVisitor.visit(parserResult.getRootNode(), reports);

@@ -97,4 +97,8 @@ public class GraphColoringSolver {
 
         return true;
     }
+
+    public Map<String, Integer> getVariableColorMap() {
+        return variableColorMap;
+    }
 }

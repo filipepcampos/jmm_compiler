@@ -2,7 +2,9 @@ package pt.up.fe.comp.jasmin;
 
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.specs.comp.ollir.*;
 
@@ -212,7 +214,11 @@ public class JasminGenerator {
         */
 
         int stackLimit = this.stackLimits.getMaxStackSize();
-        int localsLimit = method.getVarTable().size() + (method.isStaticMethod() || method.getVarTable().containsKey("this") ? 0 : 1);
+        Set<Integer> uniqueRegisters = new HashSet<>();
+        for(var entry : method.getVarTable().entrySet()){
+            uniqueRegisters.add(entry.getValue().getVirtualReg());
+        }
+        int localsLimit = uniqueRegisters.size() + (method.isStaticMethod() || method.getVarTable().containsKey("this") ? 0 : 1);
 
         return "\t.limit stack " + stackLimit + "\n\t.limit locals " + localsLimit + "\n";
     }

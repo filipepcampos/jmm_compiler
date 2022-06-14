@@ -53,6 +53,10 @@ public class Launcher {
             if(args[i].equals("-a")){
                 config.put("optimizeAll", "true");
             }
+            if(args[i].equals("-r")){
+                i++;
+                config.put("registerAllocation", args[i]);
+            }
         }
 
         // Instantiate JmmParser

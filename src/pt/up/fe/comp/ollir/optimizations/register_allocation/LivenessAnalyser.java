@@ -33,7 +33,7 @@ public class LivenessAnalyser {
     private final List<Set<String>> outList;
     private final HashMap<String, Set<Web>> webs;
     
-    public LivenessAnalyser(Node beginNode){
+    public LivenessAnalyser(Node beginNode, List<Element> parameters){
         this.nodesList = new ArrayList<>();
         this.useList = new ArrayList<>();
         this.defList = new ArrayList<>();
@@ -43,6 +43,15 @@ public class LivenessAnalyser {
 
         this.addNode(beginNode);
         this.initNodes();
+
+        for(var param : parameters){
+            Operand operand = (Operand) param;
+            if(nodesList.size() > 0){
+                defList.get(0).add(operand.getName());
+            }
+            this.webs.put(operand.getName(), new HashSet<>());
+        }
+
         this.livenessAnalyse();
         this.createWebs();
     }
@@ -112,9 +121,11 @@ public class LivenessAnalyser {
                 if(firstOperand.getType().getTypeOfElement() != ElementType.THIS && callInstruction.getInvocationType() != CallType.invokestatic){
                     use.add(firstOperand.getName());
                 }
-                for(var operand : callInstruction.getListOfOperands()){
-                    if(!operand.isLiteral()) {
-                        use.add(((Operand) operand).getName());
+                if(callInstruction.getListOfOperands() != null){
+                    for(var operand : callInstruction.getListOfOperands()){
+                        if(!operand.isLiteral()) {
+                            use.add(((Operand) operand).getName());
+                        }
                     }
                 }
                 break;
@@ -202,6 +213,7 @@ public class LivenessAnalyser {
     private void createWebs(){
         System.out.println("Creating webs " + this.nodesList.size());
         for (var entry : this.webs.entrySet()) {
+            System.out.println("creating web-" + entry.getKey());
             int webId = 0;
             for(int i = 0; i < this.nodesList.size(); ++i){
                 Node node = nodesList.get(i);

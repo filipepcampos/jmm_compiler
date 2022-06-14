@@ -392,15 +392,16 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
         Boolean doWhile = doWhileAnnotation.isPresent() && doWhileAnnotation.get().equals("true");
         JmmNode bodyNode = node.getJmmChild(1);
 
-        OllirStatement conditionStatement = visit(conditionNode, new OllirGeneratorHint(hint.getMethodSignature(), "bool", doWhile ? true : false));
+        OllirStatement conditionStatement = visit(conditionNode, new OllirGeneratorHint(hint.getMethodSignature(), "bool", false));
         OllirStatement bodyStatement = visit(bodyNode, hint);
 
-        code.append("loop").append(labelCounter).append(": \n");
         if(doWhile){
+            code.append("doWhileLoop").append(labelCounter).append(": \n");
             code.append(bodyStatement.getCodeBefore());
             code.append(conditionStatement.getCodeBefore())
-                .append(String.format("if(!.bool %s) goto loop%d;\n", conditionStatement.getResultVariable(), labelCounter));
+                .append(String.format("if(%s) goto doWhileLoop%d;\n", conditionStatement.getResultVariable(), labelCounter));
         } else {
+            code.append("loop").append(labelCounter).append(": \n");
             code.append(conditionStatement.getCodeBefore())
                 .append(String.format("if(%s) goto endLoop%d;\n", conditionStatement.getResultVariable(), labelCounter));
             code.append(bodyStatement.getCodeBefore()).append(String.format("goto loop%d;\n endLoop%d:\n", labelCounter, labelCounter));
@@ -414,7 +415,7 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
     private OllirStatement visitLengthOp(JmmNode node, OllirGeneratorHint hint){
         StringBuilder code = new StringBuilder();
         OllirGeneratorHint childHint = new OllirGeneratorHint(hint.getMethodSignature(), ".i32", false);
-        OllirStatement statement = visit(node.getJmmChild(0), hint);
+        OllirStatement statement = visit(node.getJmmChild(0), childHint);
 
         code.append(statement.getCodeBefore());
         String rhs = "arraylength(" + statement.getResultVariable() + ").i32";

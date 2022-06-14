@@ -464,6 +464,38 @@ public class JasminGenerator {
 
                     optimization = true;
                 }
+
+                if(!optimization){
+                    result.append(this.loadElement(left, varTable));
+                    result.append(this.loadElement(right, varTable));
+
+                    if(instruction.getLabel().startsWith("doWhileLoop")){
+                        switch (binaryInst.getOperation().getOpType()) {
+                            case LTH:
+                                result.append("\tif_icmplt "); break;
+                            case LTE:
+                                result.append("\tif_icmple "); break;
+                            case GTH:
+                                result.append("\tif_icmpgt "); break;
+                            case GTE:
+                                result.append("\tif_icmpge "); break;
+                        }
+                    } else {
+                        switch (binaryInst.getOperation().getOpType()) {
+                            case GTE:
+                                result.append("\tif_icmplt "); break;
+                            case GTH:
+                                result.append("\tif_icmple "); break;
+                            case LTE:
+                                result.append("\tif_icmpgt "); break;
+                            case LTH:
+                                result.append("\tif_icmpge "); break;
+                        }
+                    }
+
+                    optimization = true;
+                    this.stackLimits.update(-1);
+                }
             }     
         } 
         

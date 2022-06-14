@@ -68,18 +68,26 @@ public class GraphColoringSolver {
             Set<Integer> usedColors = new HashSet<>();
             System.out.println("Stack removing node " + node.getId());
             for (var succ : node.getSuccessors()){
-                System.out.println("succ " + succ.getId());
                 if(this.colors.containsKey(succ)){
+                    System.out.println("  Contains color " + this.colors.get(succ));
                     usedColors.add(this.colors.get(succ));
                 } else {
                     for(var p : this.nodes){
                         if(p.first.equals(succ)){
                             String[] succSplitName = p.second.split("-");
                             String succName = succSplitName[0];
-                            System.out.println("eq - " + succName);
                             if(this.variableColorMap.containsKey(succName)){
-                                System.out.println("Contains color");
+                                System.out.println("  Contains color " + this.variableColorMap.get(succName));
                                 usedColors.add(this.variableColorMap.get(succName));
+                            }
+                        } else if(p.first.equals(name)){
+                            for(var succ2 : p.first.getSuccessors()){
+                                String[] anotherSplitName = p.second.split("-");
+                                String anotherName = anotherSplitName[0];
+                                if(this.variableColorMap.containsKey(anotherName)){
+                                    usedColors.add(this.variableColorMap.get(anotherName));
+                                }
+                                
                             }
                         }
                     }

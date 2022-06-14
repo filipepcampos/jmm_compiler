@@ -9,30 +9,30 @@ import java.util.Set;
 import org.specs.comp.ollir.Node;
 
 public class InterferenceGraphCreator {
-    Set<Pair<Set<Integer>, String>> webs;
+    Set<Web> webs;
     Map<String, Node> nodes;
 
-    public InterferenceGraphCreator(Set<Pair<Set<Integer>, String>> webs){
+    public InterferenceGraphCreator(Set<Web> webs){
         this.webs = webs;
         this.nodes = new HashMap<>();
 
         int id = 0;
-        for(var pair : webs){
+        for(var web : webs){
             Node node = new Node();
             node.setId(id++);
-            nodes.put(pair.second, node);
+            nodes.put(web.toString(), node);
         }
     }
 
     public Set<Pair<Node, String>> createGraph(){
-        for(var firstPair : webs){
-            for(var secondPair : webs){
-                Node firstNode = nodes.get(firstPair.second);
-                Node secondNode = nodes.get(secondPair.second);
+        for(var firstWeb : webs){
+            for(var secondWeb : webs){
+                Node firstNode = nodes.get(firstWeb.toString());
+                Node secondNode = nodes.get(secondWeb.toString());
                 if(secondNode.getId() <= firstNode.getId()){
                     continue;
                 }
-                if(!Collections.disjoint(firstPair.first, secondPair.first)){
+                if(!firstWeb.disjoint(secondWeb)){
                     firstNode.addSucc(secondNode);
                     secondNode.addSucc(firstNode);
                 }

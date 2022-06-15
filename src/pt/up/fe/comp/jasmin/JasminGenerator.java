@@ -429,10 +429,14 @@ public class JasminGenerator {
             BinaryOpInstruction binaryInst = (BinaryOpInstruction) condition;
             OperationType opType = binaryInst.getOperation().getOpType();
 
+            System.out.println("========JASMIN======= " + binaryInst);
+
             if (opType == OperationType.GTE || opType == OperationType.GTH || opType == OperationType.LTE || opType == OperationType.LTH) {
                 
                 Element left = binaryInst.getLeftOperand();
                 Element right = binaryInst.getRightOperand();
+
+                System.out.println("Binary op with " + ((Operand) left).getName() + "-" + ((Operand) right).getName());
 
                 if (left.isLiteral() && ((LiteralElement) left).getLiteral().equals("0") && !right.isLiteral()) {
                     

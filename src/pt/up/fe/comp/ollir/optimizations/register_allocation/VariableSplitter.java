@@ -28,17 +28,17 @@ public class VariableSplitter {
 
     public void split(Method method){
         for(Instruction instruction : method.getInstructions()){
-            this.rename(instruction);
+            this.rename(instruction, instruction.getId());
         }
     }
 
-    private void rename(Instruction instruction){
+    private void rename(Instruction instruction, int instructionId){
         // websWithThisInstruction
         // when we use operand lookup websWithInstruction
     
         Set<Web> websWithInstruction = new HashSet<>();
         for (Web web : webs){
-            if(web.getInstructions().contains(instruction.getId())){
+            if(web.getInstructions().contains(instructionId)){
                 websWithInstruction.add(web);
             }
         }
@@ -47,10 +47,11 @@ public class VariableSplitter {
             case ASSIGN:
                 AssignInstruction assignInstruction = (AssignInstruction) instruction;
                 this.lookupVarAndReplace((Operand) assignInstruction.getDest(), websWithInstruction);
-                this.rename(assignInstruction.getRhs());
+                this.rename(assignInstruction.getRhs(), assignInstruction.getId());
                 break;
             case BINARYOPER:
                 BinaryOpInstruction binOp = (BinaryOpInstruction) instruction;
+                System.out.println("========SPLITTER======= " + binOp);
                 Element lhsOperand = binOp.getLeftOperand();
                 if(!lhsOperand.isLiteral()){
                     this.lookupVarAndReplace((Operand) lhsOperand, websWithInstruction);
@@ -62,7 +63,7 @@ public class VariableSplitter {
                 break;
             case BRANCH:
                 CondBranchInstruction condInstruction = (CondBranchInstruction) instruction;
-                this.rename(condInstruction.getCondition());
+                this.rename(condInstruction.getCondition(), condInstruction.getId());
                 break;
             case CALL:
                 CallInstruction callInstruction = (CallInstruction) instruction;
@@ -128,6 +129,7 @@ public class VariableSplitter {
         for (Web web : webs) {
             String varName = operand.getName();
             if (web.getVariableName().equals(varName)){
+                System.out.println("Renaming " + varName + " to " + (varName + "_" + web.getId()));
                 operand.setName(varName + "_" + web.getId());
             }
         }

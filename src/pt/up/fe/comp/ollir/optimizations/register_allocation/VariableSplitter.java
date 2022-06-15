@@ -134,7 +134,6 @@ public class VariableSplitter {
         for (Web web : webs) {
             String varName = operand.getName();
             if (web.getVariableName().equals(varName)){
-                System.out.println("Renaming " + varName + " to " + (varName + "_" + web.getId()));
                 operand.setName(varName + "_" + web.getId());
             }
         }

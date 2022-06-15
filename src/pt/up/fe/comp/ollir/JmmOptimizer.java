@@ -118,8 +118,7 @@ public class JmmOptimizer implements JmmOptimization {
         } while(updated);
     
         UnusedAssignmentRemoverVisitor unusedAssignmentRemoverVisitor = new UnusedAssignmentRemoverVisitor(semanticsResult.getSymbolTable());
-        boolean result = unusedAssignmentRemoverVisitor.visit(rootNode);
-        System.out.println("Unused Assignments removal - " + result);
+        unusedAssignmentRemoverVisitor.visit(rootNode);
     }
 
     private void astOptimizeBasic(JmmSemanticsResult semanticsResult){
@@ -164,30 +163,22 @@ public class JmmOptimizer implements JmmOptimization {
             GraphColoringSolver graphColoringSolver = new GraphColoringSolver(interferenceGraphCreator.createGraph(), numberOfRegisters);
             boolean canColor = graphColoringSolver.solve();
             if(!canColor){
-                System.out.println("Insufficient registers"); // TODO: Proper error
+                ollirResult.getReports().add(new Report(ReportType.ERROR, Stage.OPTIMIZATION, -1, "Insufficient registers"));
+                return ollirResult;
             }
             Map<String, Integer> registerMap = graphColoringSolver.getVariableColorMap();
 
             int offset = method.isStaticMethod() ? 0 : 1;
-            System.out.println(method.toString());
     
-            
-            //method.getVarTable().clear();
             method.buildVarTable();
             
             for(var entry : method.getVarTable().entrySet()){
                 String varName = entry.getKey();
                 if(registerMap.containsKey(varName)){
                     entry.getValue().setVirtualReg(registerMap.get(varName) + offset);
-                    System.out.println("updating");
                 } else {
                     entry.getValue().setVirtualReg(offset);
                 }
-            }
-
-            System.out.println("TABLE:");
-            for(var entry : method.getVarTable().entrySet()){
-                System.out.println(entry.getKey() + " - " + entry.getValue().getVirtualReg());
             }
         }
 

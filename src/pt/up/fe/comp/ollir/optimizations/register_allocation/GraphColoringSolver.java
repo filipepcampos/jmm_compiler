@@ -44,7 +44,6 @@ public class GraphColoringSolver {
 
     public boolean solve() {
         Stack<Pair<Node, String>> stack = new Stack<>();
-        System.out.println("Solving graph coloring there's " + this.nodes.size() + " nodes.");
         for(var node : this.nodes){
             if(node.first.getSuccessors().size() >= this.numberOfColors){
                 return false;
@@ -57,10 +56,8 @@ public class GraphColoringSolver {
             Node node = pair.first;            
 
             Set<Integer> usedColors = new HashSet<>();
-            System.out.println("Stack removing node " + node.getId());
             for (var succ : node.getSuccessors()){
                 if(this.colors.containsKey(succ)){
-                    System.out.println("  Contains color " + this.colors.get(succ));
                     usedColors.add(this.colors.get(succ));
                 }
             }
@@ -73,14 +70,9 @@ public class GraphColoringSolver {
                 color++;
             }
             
-            System.out.println("Coloring with " + color);
             this.colors.put(node, color);
         }
-
-        System.out.println("All colors:");
-        for(var entry : this.colors.entrySet()){
-            System.out.println(entry.getKey().getId() + " , color:" + entry.getValue());
-        }
+        
         return true;
     }
 

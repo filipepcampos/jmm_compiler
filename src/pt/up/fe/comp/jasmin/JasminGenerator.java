@@ -28,8 +28,6 @@ public class JasminGenerator {
 
         result.append(this.convertClass());
         result.append(this.convertMethods());
-
-        System.out.println(result);     // DEBUG
         
         return new JasminResult(result.toString());
     }
@@ -215,15 +213,12 @@ public class JasminGenerator {
 
         int stackLimit = this.stackLimits.getMaxStackSize();
         Set<Integer> uniqueRegisters = new HashSet<>();
-        System.out.println("Jasmin table:");
         for(var entry : method.getVarTable().entrySet()){
-            System.out.println(entry.getKey() + "----> " + entry.getValue().getVirtualReg());
             uniqueRegisters.add(entry.getValue().getVirtualReg());
         }
 
         boolean needsThisRegister = !method.isStaticMethod() && !uniqueRegisters.contains(0); // Is not static and does not contain 'this' on the table already.
         int localsLimit = uniqueRegisters.size() + (needsThisRegister ? 1 : 0);
-        System.out.println("The locals limit is " + localsLimit + " because there's " + uniqueRegisters.size() + " unique registers + " + (method.isStaticMethod() ? 0 : 1) + " extra register");
 
         return "\t.limit stack " + stackLimit + "\n\t.limit locals " + localsLimit + "\n";
     }
@@ -295,11 +290,6 @@ public class JasminGenerator {
     }
 
     private String getCode(Instruction instruction, HashMap<String, Descriptor> varTable, List<String> labels) {
-
-        // DEBUG
-        /* instruction.show();
-        System.out.println(this.stackLimits); */
-
         StringBuilder result = new StringBuilder();
 
         if (labels != null) {
@@ -679,7 +669,6 @@ public class JasminGenerator {
     }
 
     private String loadElement(Element element, HashMap<String, Descriptor> varTable) {
-        System.out.println("DEBUG: load element");
 
         StringBuilder result = new StringBuilder();
 
@@ -707,7 +696,6 @@ public class JasminGenerator {
             this.stackLimits.update(-1);
         } else if (element instanceof Operand) {
             Operand operand = (Operand) element;
-            System.out.println("operand " + operand.getName());
             ElementType type = operand.getType().getTypeOfElement();
             switch (type) {
                 case THIS:

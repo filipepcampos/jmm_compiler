@@ -271,9 +271,6 @@ public class LivenessAnalyser {
                 }
             }
         }
-        for(Web w : webs){
-            System.out.println("Web " + w.toString() + " {" + w.getInstructions() + "}");
-        }
         return webs;
     }
 

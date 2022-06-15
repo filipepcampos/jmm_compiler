@@ -228,7 +228,6 @@ public class OllirStatementGenerator extends AJmmVisitor<OllirGeneratorHint, Oll
 
             String className = idStmt.getResultVariable();
             if(className.startsWith("$")){
-                System.out.println(className);
                 String[] splitString = className.split("\\.");
                 String temporary = assignTemporary(splitString[splitString.length-1], className, code);
                 methodCallCode.append(temporary);

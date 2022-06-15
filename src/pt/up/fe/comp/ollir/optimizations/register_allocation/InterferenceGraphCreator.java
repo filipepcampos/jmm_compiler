@@ -40,16 +40,6 @@ public class InterferenceGraphCreator {
         Set<Pair<Node, String>> graph = new HashSet<>();
         for(var entry : this.nodes.entrySet()){
             graph.add(new Pair<>(entry.getValue(), entry.getKey()));
-            
-            // DEBUG
-            System.out.print(entry.getKey() + " - ");
-            System.out.print(entry.getValue().getId());
-            System.out.print(" succ:{");
-            for(var s : entry.getValue().getSuccessors()){
-                System.out.print(s.getId() + ", ");
-            }
-            System.out.println("}");
-
         }
         
         return graph;

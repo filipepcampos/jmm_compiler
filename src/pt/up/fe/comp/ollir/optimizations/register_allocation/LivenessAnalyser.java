@@ -16,6 +16,7 @@ import org.specs.comp.ollir.CondBranchInstruction;
 import org.specs.comp.ollir.Element;
 import org.specs.comp.ollir.ElementType;
 import org.specs.comp.ollir.Instruction;
+import org.specs.comp.ollir.InstructionType;
 import org.specs.comp.ollir.Node;
 import org.specs.comp.ollir.NodeType;
 import org.specs.comp.ollir.Operand;
@@ -24,6 +25,7 @@ import org.specs.comp.ollir.PutFieldInstruction;
 import org.specs.comp.ollir.UnaryOpInstruction;
 import org.specs.comp.ollir.ReturnInstruction;
 import org.specs.comp.ollir.SingleOpInstruction;
+import org.specs.comp.ollir.Type;
 
 public class LivenessAnalyser {
     private final List<Node> nodesList;
@@ -211,17 +213,20 @@ public class LivenessAnalyser {
     }
 
     private void createWebs(){
-        System.out.println("Creating webs " + this.nodesList.size());
         for (var entry : this.webs.entrySet()) {
-            System.out.println("creating web-" + entry.getKey());
             int webId = 0;
             for(int i = 0; i < this.nodesList.size(); ++i){
                 Node node = nodesList.get(i);
                 Set<String> def = this.defList.get(i);
                 if (def.contains(entry.getKey())){
-                    Web web = new Web(entry.getKey(), webId++);
-                    this.propagateWeb(node, web);
-                    entry.getValue().add(web);
+                    Instruction instruction = (Instruction) node;
+                    if(instruction.getInstType() == InstructionType.ASSIGN){
+                        AssignInstruction assignInstruction = (AssignInstruction) instruction;
+                        Type type = assignInstruction.getTypeOfAssign();
+                        Web web = new Web(entry.getKey(), type.toString(), webId++);
+                        this.propagateWeb(node, web);
+                        entry.getValue().add(web);
+                    }
                 }
             }
             

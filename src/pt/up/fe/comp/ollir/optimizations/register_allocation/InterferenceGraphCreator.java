@@ -30,7 +30,7 @@ public class InterferenceGraphCreator {
                 if(secondNode.getId() <= firstNode.getId()){
                     continue;
                 }
-                if(!firstWeb.disjoint(secondWeb)){
+                if(!firstWeb.disjoint(secondWeb) || (!firstWeb.getType().equals(secondWeb.getType()))){
                     firstNode.addSucc(secondNode);
                     secondNode.addSucc(firstNode);
                 }

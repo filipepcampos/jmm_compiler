@@ -40,8 +40,6 @@ public class JmmOptimizer implements JmmOptimization {
             List<Report> reports = new ArrayList<>();
             reports.add(new Report(ReportType.ERROR, Stage.LLIR, -1, "OLLIR parse exception occurred."));
             throw(e);
-            // OllirResult cannot be created with invalid ollir code
-            //return null;
 
         }
         String ollirCode = ollirGenerator.getCode();

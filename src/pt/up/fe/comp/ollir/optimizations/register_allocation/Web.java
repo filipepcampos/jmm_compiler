@@ -7,17 +7,19 @@ import java.util.Set;
 public class Web {
     Set<Integer> instructions;
     String variableName;
+    String type;
     int id;
 
-    public Web(Set<Integer> instructions, String variableName, int id){
+    public Web(Set<Integer> instructions, String variableName, String type, int id){
         this.instructions = instructions;
         this.variableName = variableName;
         this.id = id;
     }
 
-    public Web(String variableName, int id){
+    public Web(String variableName, String type, int id){
         this.instructions = new HashSet<>();
         this.variableName = variableName;
+        this.type = type;
         this.id = id;
     }
 
@@ -31,6 +33,10 @@ public class Web {
 
     public int getId() {
         return id;
+    }
+
+    public String getType() {
+        return type;
     }
 
     public void merge(Web web){

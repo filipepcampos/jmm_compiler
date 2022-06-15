@@ -15,12 +15,15 @@ import pt.up.fe.comp.ollir.optimizations.if_while_removal.IfWhileRemoverVisitor;
 import pt.up.fe.comp.ollir.optimizations.register_allocation.GraphColoringSolver;
 import pt.up.fe.comp.ollir.optimizations.register_allocation.InterferenceGraphCreator;
 import pt.up.fe.comp.ollir.optimizations.register_allocation.LivenessAnalyser;
+import pt.up.fe.comp.ollir.optimizations.register_allocation.VariableSplitter;
+import pt.up.fe.comp.ollir.optimizations.register_allocation.Web;
 import pt.up.fe.comp.ollir.optimizations.unused_assignment_removing.UnusedAssignmentRemoverVisitor;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.specs.comp.ollir.Method;
 import org.specs.comp.ollir.Node;
@@ -152,7 +155,11 @@ public class JmmOptimizer implements JmmOptimization {
             }
             Node node = method.getBeginNode();  // TODO: Cast to instruction
             LivenessAnalyser livenessAnalyser = new LivenessAnalyser(node, method.getParams());
-            InterferenceGraphCreator interferenceGraphCreator = new InterferenceGraphCreator(livenessAnalyser.getWebs());
+            Set<Web> webs = livenessAnalyser.getWebs();
+            VariableSplitter variableSplitter = new VariableSplitter(webs, method);
+            variableSplitter.split(method);
+
+            InterferenceGraphCreator interferenceGraphCreator = new InterferenceGraphCreator(webs);
             GraphColoringSolver graphColoringSolver = new GraphColoringSolver(interferenceGraphCreator.createGraph(), numberOfRegisters);
             boolean canColor = graphColoringSolver.solve();
             if(!canColor){

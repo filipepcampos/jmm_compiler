@@ -73,7 +73,7 @@ With this flag enabled the compiler will iteratively apply the following optimiz
 - `x / 1 = x`
 - `0 / x = 0`
 
-**IfWhileRemover (Dead code elimination)** - if statements with constant conditions will be removed, being substituted by the code inside the branch that always executes.  While loops with a constant `false` value will be removed from the code since they'll never be executed.
+**If/While Removal (Dead code elimination)** - if statements with constant conditions will be removed, being substituted by the code inside the branch that always executes.  While loops with a constant `false` value will be removed from the code since they'll never be executed.
 
 **Unused Assignment Removal (Dead Code Elimination)** - all assignments that are never used will be removed.
 

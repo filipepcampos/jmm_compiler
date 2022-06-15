@@ -16,6 +16,8 @@ import org.specs.comp.ollir.ReturnInstruction;
 import org.specs.comp.ollir.SingleOpInstruction;
 import org.specs.comp.ollir.UnaryOpInstruction;
 
+import com.javacc.output.Translator.SymbolTable;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -29,6 +31,10 @@ public class VariableSplitter {
     public void split(Method method){
         for(Instruction instruction : method.getInstructions()){
             this.rename(instruction, instruction.getId());
+        }
+        for(Element elem : method.getParams()){
+            Operand operand = (Operand) elem;
+            operand.setName(operand.getName() + "_0");
         }
     }
 
@@ -51,7 +57,6 @@ public class VariableSplitter {
                 break;
             case BINARYOPER:
                 BinaryOpInstruction binOp = (BinaryOpInstruction) instruction;
-                System.out.println("========SPLITTER======= " + binOp);
                 Element lhsOperand = binOp.getLeftOperand();
                 if(!lhsOperand.isLiteral()){
                     this.lookupVarAndReplace((Operand) lhsOperand, websWithInstruction);

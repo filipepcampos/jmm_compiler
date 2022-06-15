@@ -47,6 +47,7 @@ public class VariableSplitter {
             case ASSIGN:
                 AssignInstruction assignInstruction = (AssignInstruction) instruction;
                 this.lookupVarAndReplace((Operand) assignInstruction.getDest(), websWithInstruction);
+                this.rename(assignInstruction.getRhs());
                 break;
             case BINARYOPER:
                 BinaryOpInstruction binOp = (BinaryOpInstruction) instruction;

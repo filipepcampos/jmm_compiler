@@ -52,6 +52,6 @@ public class Web {
 
     @Override
     public String toString() {
-        return variableName + "-" + id;
+        return variableName + "_" + id;
     }
 }

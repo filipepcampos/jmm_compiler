@@ -34,14 +34,12 @@ degree < N, a color should exist)
 public class GraphColoringSolver {
     Set<Pair<Node, String>> nodes;
     Map<Node, Integer> colors;
-    Map<String, Integer> variableColorMap;
     int numberOfColors;
 
     public GraphColoringSolver(Set<Pair<Node, String>> nodes, int numberOfColors) {
         this.nodes = nodes;
         this.numberOfColors = numberOfColors;
         this.colors = new HashMap<>();
-        this.variableColorMap = new HashMap<>();
     }
 
     public boolean solve() {
@@ -56,41 +54,14 @@ public class GraphColoringSolver {
 
         while(!stack.isEmpty()){
             Pair<Node, String> pair = stack.pop();
-            Node node = pair.first;
-            
-            String[] splitName = pair.second.split("-");
-            String name = splitName[0]; // Name without web id
-            
-            if(this.variableColorMap.containsKey(name)){
-                continue;
-            }
-            
+            Node node = pair.first;            
+
             Set<Integer> usedColors = new HashSet<>();
             System.out.println("Stack removing node " + node.getId());
             for (var succ : node.getSuccessors()){
                 if(this.colors.containsKey(succ)){
                     System.out.println("  Contains color " + this.colors.get(succ));
                     usedColors.add(this.colors.get(succ));
-                } else {
-                    for(var p : this.nodes){
-                        if(p.first.equals(succ)){
-                            String[] succSplitName = p.second.split("-");
-                            String succName = succSplitName[0];
-                            if(this.variableColorMap.containsKey(succName)){
-                                System.out.println("  Contains color " + this.variableColorMap.get(succName));
-                                usedColors.add(this.variableColorMap.get(succName));
-                            }
-                        } else if(p.first.equals(name)){
-                            for(var succ2 : p.first.getSuccessors()){
-                                String[] anotherSplitName = p.second.split("-");
-                                String anotherName = anotherSplitName[0];
-                                if(this.variableColorMap.containsKey(anotherName)){
-                                    usedColors.add(this.variableColorMap.get(anotherName));
-                                }
-                                
-                            }
-                        }
-                    }
                 }
             }
 
@@ -104,22 +75,20 @@ public class GraphColoringSolver {
             
             System.out.println("Coloring with " + color);
             this.colors.put(node, color);
-            this.variableColorMap.put(name, color);
         }
 
         System.out.println("All colors:");
         for(var entry : this.colors.entrySet()){
             System.out.println(entry.getKey().getId() + " , color:" + entry.getValue());
         }
-        System.out.println("Variable to color:");
-        for(var entry : this.variableColorMap.entrySet()){
-            System.out.println(entry.getKey() + "-> " + entry.getValue());
-        }
-
         return true;
     }
 
-    public Map<String, Integer> getVariableColorMap() {
+    public Map<String, Integer> getVariableColorMap(){
+        Map<String, Integer> variableColorMap = new HashMap<>();
+        for(var pair : this.nodes){
+            variableColorMap.put(pair.second, this.colors.get(pair.first));
+        }
         return variableColorMap;
     }
 }

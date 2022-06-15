@@ -132,7 +132,7 @@ public class JmmOptimizer implements JmmOptimization {
 
     @Override
     public OllirResult optimize(OllirResult ollirResult) {
-        if(!ollirResult.getConfig().containsKey("registerAllocation")){
+        /*if(!ollirResult.getConfig().containsKey("registerAllocation")){
             return ollirResult;
         }
         String numberOfRegistersString = ollirResult.getConfig().get("registerAllocation");
@@ -144,6 +144,8 @@ public class JmmOptimizer implements JmmOptimization {
             return ollirResult;
         }
         numberOfRegisters = numberOfRegisters == 0 ? 99 : numberOfRegisters; // If -r = 0 we'll try to minimize the number of registers
+        */
+        int numberOfRegisters = 99;
         System.out.println("debug nRegisters:" + numberOfRegisters);
         
         for (Method method : ollirResult.getOllirClass().getMethods()) {
@@ -154,9 +156,11 @@ public class JmmOptimizer implements JmmOptimization {
                 e.printStackTrace();
             }
             Node node = method.getBeginNode();  // TODO: Cast to instruction
+            
             LivenessAnalyser livenessAnalyser = new LivenessAnalyser(node, method.getParams());
             Set<Web> webs = livenessAnalyser.getWebs();
-            VariableSplitter variableSplitter = new VariableSplitter(webs, method);
+            
+            VariableSplitter variableSplitter = new VariableSplitter(webs);
             variableSplitter.split(method);
 
             InterferenceGraphCreator interferenceGraphCreator = new InterferenceGraphCreator(webs);
@@ -168,14 +172,27 @@ public class JmmOptimizer implements JmmOptimization {
             Map<String, Integer> registerMap = graphColoringSolver.getVariableColorMap();
 
             int offset = method.isStaticMethod() ? 0 : 1;
+            System.out.println(method.toString());
+            //method.
+    
+            
+            //method.getVarTable().clear();
+            method.buildVarTable();
+            
             for(var entry : method.getVarTable().entrySet()){
                 String varName = entry.getKey();
                 if(registerMap.containsKey(varName)){
                     entry.getValue().setVirtualReg(registerMap.get(varName) + offset);
                     System.out.println("updating");
+                } else {
+                    entry.getValue().setVirtualReg(offset);
                 }
             }
 
+            System.out.println("TABLE:");
+            for(var entry : method.getVarTable().entrySet()){
+                System.out.println(entry.getKey() + " - " + entry.getValue().getVirtualReg());
+            }
         }
 
         return ollirResult;

@@ -215,10 +215,15 @@ public class JasminGenerator {
 
         int stackLimit = this.stackLimits.getMaxStackSize();
         Set<Integer> uniqueRegisters = new HashSet<>();
+        System.out.println("Jasmin table:");
         for(var entry : method.getVarTable().entrySet()){
+            System.out.println(entry.getKey() + "----> " + entry.getValue().getVirtualReg());
             uniqueRegisters.add(entry.getValue().getVirtualReg());
         }
-        int localsLimit = uniqueRegisters.size() + (method.isStaticMethod() || method.getVarTable().containsKey("this") ? 0 : 1);
+
+        boolean needsThisRegister = !method.isStaticMethod() && !uniqueRegisters.contains(0); // Is not static and does not contain 'this' on the table already.
+        int localsLimit = uniqueRegisters.size() + (needsThisRegister ? 1 : 0);
+        System.out.println("The locals limit is " + localsLimit + " because there's " + uniqueRegisters.size() + " unique registers + " + (method.isStaticMethod() ? 0 : 1) + " extra register");
 
         return "\t.limit stack " + stackLimit + "\n\t.limit locals " + localsLimit + "\n";
     }

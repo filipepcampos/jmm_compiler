@@ -28,8 +28,6 @@ public class JasminGenerator {
 
         result.append(this.convertClass());
         result.append(this.convertMethods());
-
-        System.out.println(result);     // DEBUG
         
         return new JasminResult(result.toString());
     }
@@ -218,7 +216,9 @@ public class JasminGenerator {
         for(var entry : method.getVarTable().entrySet()){
             uniqueRegisters.add(entry.getValue().getVirtualReg());
         }
-        int localsLimit = uniqueRegisters.size() + (method.isStaticMethod() || method.getVarTable().containsKey("this") ? 0 : 1);
+
+        boolean needsThisRegister = !method.isStaticMethod() && !uniqueRegisters.contains(0); // Is not static and does not contain 'this' on the table already.
+        int localsLimit = uniqueRegisters.size() + (needsThisRegister ? 1 : 0);
 
         return "\t.limit stack " + stackLimit + "\n\t.limit locals " + localsLimit + "\n";
     }
@@ -290,11 +290,6 @@ public class JasminGenerator {
     }
 
     private String getCode(Instruction instruction, HashMap<String, Descriptor> varTable, List<String> labels) {
-
-        // DEBUG
-        /* instruction.show();
-        System.out.println(this.stackLimits); */
-
         StringBuilder result = new StringBuilder();
 
         if (labels != null) {
@@ -463,6 +458,38 @@ public class JasminGenerator {
                     }
 
                     optimization = true;
+                }
+
+                if(!optimization){
+                    result.append(this.loadElement(left, varTable));
+                    result.append(this.loadElement(right, varTable));
+
+                    if(instruction.getLabel().startsWith("doWhileLoop")){
+                        switch (binaryInst.getOperation().getOpType()) {
+                            case LTH:
+                                result.append("\tif_icmplt "); break;
+                            case LTE:
+                                result.append("\tif_icmple "); break;
+                            case GTH:
+                                result.append("\tif_icmpgt "); break;
+                            case GTE:
+                                result.append("\tif_icmpge "); break;
+                        }
+                    } else {
+                        switch (binaryInst.getOperation().getOpType()) {
+                            case GTE:
+                                result.append("\tif_icmplt "); break;
+                            case GTH:
+                                result.append("\tif_icmple "); break;
+                            case LTE:
+                                result.append("\tif_icmpgt "); break;
+                            case LTH:
+                                result.append("\tif_icmpge "); break;
+                        }
+                    }
+
+                    optimization = true;
+                    this.stackLimits.update(-1);
                 }
             }     
         } 

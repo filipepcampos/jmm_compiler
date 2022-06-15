@@ -265,10 +265,11 @@ public class LivenessAnalyser {
     public Set<Web> getWebs(){
         Set<Web> webs = new HashSet<>();
         for(var entry : this.webs.entrySet()){
-            webs.addAll(entry.getValue());
-        }
-        for(Web w : webs){
-            System.out.println("Web " + w.toString() + " {" + w.getInstructions() + "}");
+            for(var web : entry.getValue()){
+                if(!web.getInstructions().isEmpty()){
+                    webs.add(web);
+                }
+            }
         }
         return webs;
     }

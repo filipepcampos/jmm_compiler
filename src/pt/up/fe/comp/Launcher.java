@@ -117,11 +117,14 @@ public class Launcher {
 
         // OLLIR optimization
         ollirResult = optimizer.optimize(ollirResult);
+        if(!ollirResult.getReports().isEmpty()){
+            System.out.println("Program finished due to error ollir optimization.");
+            System.out.println(ollirResult.getReports().get(0).getMessage());
+            return;
+        }
     
         TestUtils.noErrors(ollirResult);
         ollirResult.getOllirClass().buildCFGs();
-
-        //OllirResult ollirResult = new OllirResult(input, config);
 
         // OLLIR to Jasmin
         OllirToJasmin converter = new OllirToJasmin();

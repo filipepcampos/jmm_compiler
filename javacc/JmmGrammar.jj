@@ -177,7 +177,7 @@ ExpressionFirst #void :
 	(<THIS> { jjtThis.put("name", "this"); }) #Id |
 	SCAN 2 (<NEW> <INT>) <OPEN_SQUARE_PAREN> AndExpression <CLOSE_SQUARE_PAREN> #ArrayInitialization(1) |
 	(<NEW> <IDENTIFIER> { jjtThis.put("name", lastConsumedToken.getImage()); } <OPEN_PAREN> <CLOSE_PAREN>) #ClassInitialization|
-	<OPEN_PAREN> AndExpression <CLOSE_PAREN> #ExpressionInParentheses(1) // TODO: See if this is necessary
+	<OPEN_PAREN> AndExpression <CLOSE_PAREN> #ExpressionInParentheses(1)
 ;
 
 IntegerLiteral #void :

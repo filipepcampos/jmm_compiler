@@ -24,7 +24,6 @@ public class TypeTest {
 
     @Test
     public void integerArrayWithSpaces(){
-        // TODO: Is this the intended behaviour
         test("int [    ]", true);
     }
 

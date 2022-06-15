@@ -41,7 +41,6 @@ public class OllirUtils {
             classUnit.buildVarTables();
 
             return classUnit;
-            // TODO: Falta análise semântica no ollir, como forçar literais booleans a true/false,
             // toda semântica que lhes pedimos mais verificações de tipos e imports nas declaracoes
         } catch (Exception e) {
             // // Get cause

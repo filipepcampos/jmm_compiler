@@ -80,7 +80,7 @@ public class LivenessAnalyser {
                     AssignInstruction assignInstruction = (AssignInstruction) instruction;
                     String variableName = ((Operand) assignInstruction.getDest()).getName();
                     def.add(variableName);
-                    this.webs.put(variableName, new HashSet<>());   // Everytime a variable is defined a new entry in webs is created TODO: This looks inefficient
+                    this.webs.put(variableName, new HashSet<>());   // Everytime a variable is defined a new entry in webs is created
                 }
                 defList.add(def);
 

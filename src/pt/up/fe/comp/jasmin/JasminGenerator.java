@@ -168,12 +168,6 @@ public class JasminGenerator {
             result.append("static ");
         }
 
-        /* if (method.isConstructMethod()) {
-            result.append("<init>");    // TODO: Doubt
-        } else {
-            result.append(method.getMethodName());
-        } */
-
         result.append(method.getMethodName());
 
         result.append("(");
@@ -691,7 +685,7 @@ public class JasminGenerator {
             result.append("\taload").append(this.getVirtualReg(arrayOperand.getName(), varTable)).append("\n");
             this.stackLimits.update(1);
             
-            result.append(this.loadElement(arrayOperand.getIndexOperands().get(0), varTable)); // TODO: Support for multiple dimensional arrays
+            result.append(this.loadElement(arrayOperand.getIndexOperands().get(0), varTable));
             
             result.append("\tiaload\n");
             this.stackLimits.update(-1);
@@ -728,8 +722,6 @@ public class JasminGenerator {
         /*
         invokestatic io/println(Ljava/lang/String;)V
         */
-
-        //method.show();  // DEBUG
 
         StringBuilder result = new StringBuilder();
 

@@ -59,10 +59,15 @@ public class ConditionVisitor extends AJmmVisitor<Boolean, Optional<Integer>> {
     }
 
     public Optional<Integer> visitUnaryOp(JmmNode node, Boolean dummy){
-        return Optional.empty(); // TODO
+        Optional<Integer> child = visit(node.getJmmChild(0));
+        if(child.isEmpty()){
+            return Optional.empty();
+        } else {
+            Integer value = child.get();
+            return Optional.of(1 - value);
+        }
     }
 
-    // TODO: Generalize this method since it's used in const. folding
     public Optional<Integer> visitBinaryOp(JmmNode node, Boolean dummy){
         String op = node.get("op");
         

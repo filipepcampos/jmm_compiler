@@ -144,12 +144,7 @@ public class JmmOptimizer implements JmmOptimization {
 
         for (Method method : ollirResult.getOllirClass().getMethods()) {
             method.buildCFG();
-            try {
-                method.outputCFG();
-            } catch(OllirErrorException e){
-                e.printStackTrace();
-            }
-            Node node = method.getBeginNode();  // TODO: Cast to instruction
+            Node node = method.getBeginNode();
             
             LivenessAnalyser livenessAnalyser = new LivenessAnalyser(node, method.getParams());
             Set<Web> webs = livenessAnalyser.getWebs();

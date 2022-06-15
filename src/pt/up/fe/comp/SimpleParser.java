@@ -58,7 +58,6 @@ public class SimpleParser implements JmmParser {
             return getJmmParserResult(config, parser);
 
         } catch (Exception e) {
-            // TODO: e.getCause()
             return JmmParserResult.newError(Report.newError(Stage.SYNTATIC, -1, -1, "Exception during parsing", e));
         }
     }

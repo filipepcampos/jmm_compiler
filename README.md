@@ -4,10 +4,10 @@
 
 |Name|Number|Self-assessment Grade|Contribution Grade|
 |---|---|---|---|
-|Adriano Soares|201904873|20|25%|
-|Ângela Cruz|201806781|20|25%|
-|Filipe Campos|201905609|20|25%|
-|Francisco Cerqueira|201905337|20|25%|
+|[Adriano Soares](https://github.com/adr1an0s0ar3s/)|201904873|20|25%|
+|[Ângela Cruz](https://github.com/angelacruz99)|201806781|20|25%|
+|[Filipe Campos](https://github.com/filipepcampos)|201905609|20|25%|
+|[Francisco Cerqueira](https://github.com/xico2001pt)|201905337|20|25%|
 
 **Global grade of the project**: 20
 
